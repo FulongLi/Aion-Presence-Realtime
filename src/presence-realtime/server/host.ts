@@ -85,6 +85,8 @@ export class PresenceHost {
     const pack = join(process.cwd(), "presence-assets", "packs", "chinese-writing");
     const env: NodeJS.ProcessEnv = {
       ...(existsSync(pack) ? { AION_CHINESE_PACK: pack } : {}),
+      // Realtime's existing name for the optional keyed image search (the core calls it AION_PRESENCE_BRAVE_SEARCH_KEY).
+      ...(options.env.BRAVE_SEARCH_API_KEY ? { AION_PRESENCE_BRAVE_SEARCH_KEY: options.env.BRAVE_SEARCH_API_KEY } : {}),
       ...options.env, AION_CAD_WORKSPACE: cadWorkspace, AION_SIM_WORKSPACE: join(options.home, "sim"),
     };
     // The host owns the CAD backend and the simulation service (the Plugin's server would make its own and rely on process exit).
