@@ -5,7 +5,7 @@ import { IMAGE_INTENTS, TERRAIN_STYLES, type VisualAction } from "../../visual-a
 import { CONTROL, validateVisualAction } from "../../visual-actions/validate";
 import { FORM_NAME_MAX, visualForms, type VisualFormRegistry } from "../../visual-forms";
 import { isVisualToolName, type VisualToolName } from "./definitions";
-import { displayed, failed, failureStatus, type ToolResult } from "./results";
+import { displayed, failed, failureStatus, type ModelResult, type ToolResult } from "./results";
 
 /** The part of VisualActionController the executor drives. */
 export interface VisualBody {
@@ -23,7 +23,7 @@ export interface ToolExecution {
   name: string;
   /** The validated action, or null when the call was rejected before reaching the body. */
   action: VisualAction | null;
-  result: ToolResult;
+  result: ModelResult;
   ms: number;
 }
 

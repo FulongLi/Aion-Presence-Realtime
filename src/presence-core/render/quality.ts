@@ -39,7 +39,7 @@ export interface QualitySettings {
 }
 
 /**
- * Frame-time driven quality control with hysteresis (from SCF Presence): sustained slowness steps down
+ * Frame-time driven quality control with hysteresis (from Aion Presence Realtime): sustained slowness steps down
  * quickly, sustained smoothness steps up slowly, and a level that fails right after an upgrade is not
  * retried. rAF intervals cannot show headroom beyond the display rate, so "good" means consistently at the
  * refresh rate with almost no dropped frames.

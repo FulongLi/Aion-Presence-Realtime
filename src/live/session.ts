@@ -1,4 +1,4 @@
-import { visualTools, type VisualFunctionTool } from "../voice/tools/definitions";
+import { visualTools, type SessionTool } from "../voice/tools/definitions";
 import { LIVE_FRONTEND_CLIENT_EVENTS } from "./events";
 import { LIVE_BACKEND_INSTRUCTIONS, LIVE_VOICE_INSTRUCTIONS } from "./instructions";
 
@@ -22,6 +22,8 @@ export interface LiveSessionOptions {
   voice: string;
   /** Optional backend reasoning effort; omitted lets the backend model use its default. */
   reasoningEffort?: ReasoningEffort;
+  /** The backend's function tools (the server passes the canonical registry's); default: the legacy visual tools. */
+  tools?: readonly SessionTool[];
 }
 
 export interface LiveSessionConfig {
@@ -33,7 +35,7 @@ export interface LiveSessionConfig {
     responses: {
       model: string;
       instructions: string;
-      tools: readonly VisualFunctionTool[];
+      tools: readonly SessionTool[];
       tool_choice: "auto";
       parallel_tool_calls: false;
       reasoning?: { effort: ReasoningEffort };
@@ -60,7 +62,7 @@ export function liveOptionsFromEnv(env: Record<string, string | undefined>): Liv
 }
 
 /**
- * Responses delegation with SCF's visual tools: GPT-Live listens, speaks and decides when help is needed;
+ * Responses delegation with Aion's visual tools: GPT-Live listens, speaks and decides when help is needed;
  * the Responses backend reasons and selects tools; the browser executes them with the same ToolExecutor
  * the Realtime path uses. The tool list is the canonical `visualTools` — no second schema. Tool calls are
  * sequential (the migration guide's recommended starting point, and one visual at a time anyway).
@@ -76,7 +78,7 @@ export function buildLiveSessionConfig(options: LiveSessionOptions): LiveSession
       responses: {
         model: options.backendModel,
         instructions: LIVE_BACKEND_INSTRUCTIONS,
-        tools: visualTools,
+        tools: options.tools ?? visualTools,
         tool_choice: "auto",
         parallel_tool_calls: false,
         ...(options.reasoningEffort ? { reasoning: { effort: options.reasoningEffort } } : {}),

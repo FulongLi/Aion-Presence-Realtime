@@ -47,9 +47,9 @@ test("mints an ephemeral client secret with the GA session config; the API key s
 
 test("safety identifier: a salted hash of the anonymous installation id, never the raw id", async () => {
   const { fetcher, calls } = upstream();
-  await createRealtimeToken(request(), { OPENAI_API_KEY: KEY, SCF_SAFETY_ID_SALT: "pepper" }, fetcher);
+  await createRealtimeToken(request(), { OPENAI_API_KEY: KEY, AION_SAFETY_ID_SALT: "pepper" }, fetcher);
   const header = (calls[0].init.headers as Record<string, string>)["OpenAI-Safety-Identifier"];
-  assert.match(header, /^scf-[0-9a-f]{40}$/);
+  assert.match(header, /^aion-[0-9a-f]{40}$/);
   assert.ok(!header.includes(INSTALL));
   assert.equal(header, await safetyIdentifier(INSTALL, "pepper"), "stable per installation");
   assert.notEqual(header, await safetyIdentifier(INSTALL, "other-salt"), "unlinkable across deployments");
@@ -98,4 +98,20 @@ test("upstream failures map to stable codes without leaking the key", async () =
   assert.deepEqual(await createRealtimeToken(request(), { OPENAI_API_KEY: KEY }, unreachable), { status: 502, body: { error: "upstream-unreachable" } });
   const empty = upstream(200, {});
   assert.equal((await createRealtimeToken(request(), { OPENAI_API_KEY: KEY }, empty.fetcher)).body.error, "upstream-error");
+});
+
+test("renamed settings: AION_* is read first, and the pre-rename SCF_* names still work", async () => {
+  const { setting } = await import("../src/server/settings");
+  assert.equal(setting({ SCF_ALLOWED_ORIGINS: "https://old.example" }, "ALLOWED_ORIGINS"), "https://old.example");
+  assert.equal(setting({ AION_ALLOWED_ORIGINS: "https://new.example", SCF_ALLOWED_ORIGINS: "https://old.example" }, "ALLOWED_ORIGINS"), "https://new.example");
+  assert.equal(setting({ AION_VOICE_BACKEND: "  " , SCF_VOICE_BACKEND: "live" }, "VOICE_BACKEND"), "live", "an empty new name falls back");
+  assert.equal(setting({}, "SAFETY_ID_SALT"), undefined);
+});
+
+test("the installation id survives the rename: an id under the old storage key is carried over, not replaced", async () => {
+  const { installationId } = await import("../src/realtime/identity");
+  const stored = new Map<string, string>([["scf-presence-realtime:installation", "0123456789abcdef0123"]]);
+  const storage = { getItem: (key: string) => stored.get(key) ?? null, setItem: (key: string, value: string) => { stored.set(key, value); } };
+  assert.equal(installationId(storage), "0123456789abcdef0123");
+  assert.equal(stored.get("aion-presence-realtime:installation"), "0123456789abcdef0123");
 });

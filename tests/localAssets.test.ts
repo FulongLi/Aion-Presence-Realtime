@@ -12,7 +12,7 @@ import { checkSvgText, normalizeLogoRaster, sizedSvg, svgRasterSize } from "../s
 import type { ImageProvider, Raster } from "../src/visual-resolver/types";
 import { ToolExecutor } from "../src/voice/tools/executor";
 
-const ORIGIN = "https://scf.test";
+const ORIGIN = "https://aion.test";
 const LOGO_PATH = "/assets/brand/spirit-connect-logo.svg";
 const LOGO_SVG = `<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 200 50" width="200" height="50">
 <defs><linearGradient id="g"><stop offset="0" stop-color="#123"/></linearGradient></defs>

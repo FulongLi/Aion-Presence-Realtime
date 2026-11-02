@@ -128,14 +128,14 @@ test("display text is cleaned and bounded", () => {
   assert.equal(cleanText("", 10), null);
 });
 
-test("hold durations default per kind (SCF's for its visuals) and are clamped", () => {
+test("hold durations default per kind (Realtime's for its visuals) and are clamped", () => {
   assert.equal(holdFor(orion), HOLD_SECONDS.form);
   assert.equal(holdFor(result, 0), 0);
   assert.equal(holdFor(result, 1), LIMITS.hold.min);
   assert.equal(holdFor(result, 10_000), LIMITS.hold.max);
   const long = { kind: "text", text: "x ".repeat(200).trim() } as const;
   assert.ok(holdFor(long) > holdFor({ kind: "text", text: "short sentence that is shown beside the body" }));
-  // SCF Presence's tuned holds, in seconds formed.
+  // Aion Presence Realtime's tuned holds, in seconds formed.
   const media = { id: "m000000000000000000", mime: "image/png", bytes: 10 };
   assert.deepEqual([
     holdFor({ kind: "clock", time: "12:30" }), holdFor({ kind: "number", value: "42%" }), holdFor({ kind: "text", text: "Paris" }),

@@ -154,7 +154,8 @@ export class PresenceView {
   private wide = false;
   private readonly framed: Framing = { x: 0, y: 0, scale: 1 };
 
-  constructor(private readonly elements: ViewElements, private readonly transport: PresenceTransport, options: { debug?: boolean } = {}) {
+  /** Realtime delta: `speech` replaces the browser synthesizer for the welcome (Realtime speaks it with its own voice). */
+  constructor(private readonly elements: ViewElements, private readonly transport: PresenceTransport, options: { debug?: boolean; speech?: WelcomeSpeech } = {}) {
     this.visual = new VisualActionController<BodyRequest>((request, signal) => this.resolve(request, signal));
     // The host's activity (hub) is the base; the engine layers local listening on top (see core/signal.ts). Only a
     // visual the body itself has become is "presenting": a card beside the body leaves it listening and answering.
@@ -181,7 +182,7 @@ export class PresenceView {
       replay: () => this.narrate(this.narration.listen(Date.now(), this.speechReady === true)),
       skip: () => { this.narrate(this.narration.skip()); this.welcome?.hide(); this.narration.close(); },
     }, navigator.language, this.welcomeScript) : null;
-    this.speech = this.welcome ? new BrowserWelcomeSpeech() : null;
+    this.speech = this.welcome ? options.speech ?? new BrowserWelcomeSpeech() : null;
     addEventListener("pagehide", () => this.narrate(this.narration.interrupt("closed")));
     this.markerLayer = elements.markers ? new MarkerLayer(elements.markers, {
       target: () => this.visual.phase === "sphere" ? null : this.visual.target,
@@ -737,7 +738,7 @@ export class PresenceView {
       case "image": {
         const blob = await this.transport.media(request.media.id);
         signal.throwIfAborted();
-        // The fit carries the request's intent: a portrait keeps SCF's head-and-shoulders band and portrait sampling.
+        // The fit carries the request's intent: a portrait keeps Realtime's head-and-shoulders band and portrait sampling.
         // Heritage: the same photograph in an antique oval (see visual/oval.ts).
         return { visual: normalizeImage(await decodeImage(blob), request.fit, { portraitStyle: request.style }), hold, label: "image" };
       }
@@ -819,14 +820,16 @@ export class PresenceView {
    * computed, on this device: nothing is recorded, stored, uploaded or transcribed. Refused or unavailable,
    * Aion simply follows Codex's states, and says so once.
    */
-  async listen() {
+  async listen(shared?: MediaStream) {
     this.listenAllowed = true;
     if (this.mic === "requesting" || this.mic === "ready") return;
     this.mic = "requesting";
     this.micPermission = await microphonePermission();
     let stream: MediaStream;
     try {
-      stream = await requestMicrophone();
+      // Realtime delta: the voice session's own microphone stream, so the page opens the microphone once.
+      stream = shared ?? await requestMicrophone();
+      this.sharedStream = shared !== undefined;
     } catch (error) {
       const denied = error instanceof DOMException && (error.name === "NotAllowedError" || error.name === "SecurityError");
       this.mic = denied ? "denied" : "unavailable";
@@ -859,9 +862,12 @@ export class PresenceView {
     this.player.stop(false);
     this.presence.setMicrophone(null);
     this.listener.stop();
-    for (const track of this.stream?.getTracks() ?? []) track.stop();
+    if (!this.sharedStream) for (const track of this.stream?.getTracks() ?? []) track.stop();
     this.stream = null;
   }
+
+  /** Realtime delta: the microphone stream belongs to the voice session (never stopped here). */
+  private sharedStream = false;
 
   private microphoneLost() { this.presence.setMicrophone(null); this.mic = "unavailable"; this.audio.bus.setConnected("microphone", false, performance.now() / 1000); this.reportAudio(); }
 

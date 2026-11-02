@@ -8,7 +8,7 @@ import { initialState, presenceHints, reduce, type RealtimePresenceState, type S
 
 export type { ChannelLike, PeerLike, Transcript };
 
-/** What the SCF server returns from POST /api/realtime/token. Never contains the standard API key. */
+/** What the Aion server returns from POST /api/realtime/token. Never contains the standard API key. */
 export interface RealtimeToken { value: string; expiresAt?: number; model: string; voice: string }
 
 /** A connection failure. `retryable` separates transient network trouble from configuration errors. */

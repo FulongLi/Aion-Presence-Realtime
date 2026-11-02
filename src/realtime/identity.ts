@@ -1,4 +1,6 @@
-const KEY = "scf-presence-realtime:installation";
+const KEY = "aion-presence-realtime:installation";
+/** The key before the rename (SCF Presence Realtime): an existing id is carried over, not replaced. */
+const PREVIOUS_KEY = "scf-presence-realtime:installation";
 const FORMAT = /^[a-z0-9-]{16,64}$/;
 
 let fallback: string | undefined;
@@ -15,6 +17,8 @@ export function installationId(storage: Pick<Storage, "getItem" | "setItem"> | n
   try {
     const existing = storage?.getItem(KEY);
     if (existing && FORMAT.test(existing)) return existing;
+    const previous = storage?.getItem(PREVIOUS_KEY);
+    if (previous && FORMAT.test(previous)) { storage?.setItem(KEY, previous); return previous; }
     const created = random();
     storage?.setItem(KEY, created);
     if (storage) return created;

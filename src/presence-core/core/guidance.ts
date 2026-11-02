@@ -1,7 +1,7 @@
 import { AION_IDENTITY, type AionIdentity } from "./identity";
 
 /**
- * The words around Aion, built from its identity and from what this build can actually do (SCF's
+ * The words around Aion, built from its identity and from what this build can actually do (Realtime's
  * aion/guidance.ts). In plugin mode the host agent speaks them, in its own voice or text, as Aion: one embodied
  * presence in the first person (Embodiment Mode). Aion never speaks by itself.
  */
@@ -83,7 +83,7 @@ export function onboardingLine(examples: readonly OnboardingExample[] = ONBOARDI
 }
 
 /**
- * When the greeting wave plays (SCF's GreetingGate, adapted): once per newly opened Presence, after the body is
+ * When the greeting wave plays (Realtime's GreetingGate, adapted): once per newly opened Presence, after the body is
  * on screen and a short quiet settle. If the user is speaking, it waits for a natural pause instead of
  * interrupting; a greeting that could not find one within `staleMs` is dropped (the conversation has begun).
  */

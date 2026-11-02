@@ -6,7 +6,7 @@ import type { VisualTarget } from "../visual-resolver/types";
  *
  * `image` and `terrain` are open: the query or region is free text that the Visual Resolver turns into
  * a target. `emoji` is any single Unicode emoji, drawn locally from the system emoji font. `form` is a
- * concept from SCF's own visual language (a registered visual form, e.g. "tao.yin-yang" or
+ * concept from Aion's own visual language (a registered visual form, e.g. "tao.yin-yang" or
  * "astronomy.orion"), drawn procedurally. The other types are convenience shapes with a fixed vocabulary.
  */
 export type VisualAction =

@@ -6,7 +6,7 @@ import { LiveDelegationLoop } from "./delegation";
 import { parseLiveEvent, type LiveClientEvent, type LiveCloseReason, type LiveEvent } from "./events";
 import { initialLiveState, liveBusy, liveHints, reduceLive, type LivePresenceState, type LiveStateEvent } from "./state";
 
-/** What the SCF server returns from POST /api/live/session. Never contains the API key. */
+/** What the Aion server returns from POST /api/live/session. Never contains the API key. */
 export interface LiveSessionAnswer { sdp: string; sessionId?: string; model: string; backendModel: string; voice: string }
 
 /** A peer connection with the ICE-gathering surface GPT-Live's non-trickle offer needs. */
@@ -18,7 +18,7 @@ export interface LivePeerLike extends PeerLike {
 
 export interface LiveEnvironment {
   createPeer(): LivePeerLike;
-  /** Sends the SDP offer to SCF's server, which creates the Live session with OPENAI_API_KEY. */
+  /** Sends the SDP offer to Aion's server, which creates the Live session with OPENAI_API_KEY. */
   createSession(offer: string, signal: AbortSignal): Promise<LiveSessionAnswer>;
   now(): number;
   setTimer(callback: () => void, ms: number): unknown;
@@ -58,7 +58,7 @@ export interface LiveCloseRecord { sessionId: string | null; reason: LiveCloseRe
  * One browser GPT-Live session over WebRTC.
  *
  *   microphone track ──► RTCPeerConnection ──► GPT-Live ──► remote audio track (the voice)
- *   SDP offer ──► SCF server (OPENAI_API_KEY) ──► POST /v1/live/sessions ──► SDP answer + session id
+ *   SDP offer ──► Aion server (OPENAI_API_KEY) ──► POST /v1/live/sessions ──► SDP answer + session id
  *   data channel "oai-events" ◄──► session, transcript and nested Responses (delegation) events
  *
  * The HTTP request starts the session: the client never sends session.start, and treats the session as
@@ -141,7 +141,7 @@ export class LiveClient implements VoiceClient {
    */
   speak(line: string): boolean {
     if (this.state.connection !== "connected" || this.busy()) return false;
-    return this.send({ type: "session.commentary.append", event_id: `scf_speak_${++this.spoken}`, content: line, delegation_id: null });
+    return this.send({ type: "session.commentary.append", event_id: `aion_speak_${++this.spoken}`, content: line, delegation_id: null });
   }
 
   send(event: LiveClientEvent): boolean {
@@ -278,7 +278,7 @@ export class LiveClient implements VoiceClient {
       if (event.type === "session.closed") release({ sessionId, reason: event.reason, seconds: event.seconds ?? seconds, confirmed: true });
     };
     channel.onclose = unconfirmed;
-    try { channel.send(JSON.stringify({ type: "session.close", event_id: "scf_close" } satisfies LiveClientEvent)); } catch { unconfirmed(); }
+    try { channel.send(JSON.stringify({ type: "session.close", event_id: "aion_close" } satisfies LiveClientEvent)); } catch { unconfirmed(); }
   }
 
   private receive(generation: number, data: unknown) {

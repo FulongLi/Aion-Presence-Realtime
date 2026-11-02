@@ -16,7 +16,7 @@ import { VisualActionController } from "../../src/presence-core/visual/controlle
 import { tempHome } from "./helpers";
 
 /**
- * A microphone made of a loudness schedule, run through SCF's real VAD and emphasis detectors: the same path
+ * A microphone made of a loudness schedule, run through Realtime's real VAD and emphasis detectors: the same path
  * as the browser listener, minus the audio device.
  */
 class ScriptedMic implements MicInput {

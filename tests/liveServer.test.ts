@@ -7,6 +7,7 @@ import { buildSessionConfig, sessionOptionsFromEnv } from "../src/realtime/sessi
 import { createLiveSession, LIVE_SESSIONS_URL, validOffer } from "../src/server/liveSession";
 import { VISUAL_TOOL_NAMES, visualTools } from "../src/voice/tools/definitions";
 import { VISUAL_TOOL_RULES } from "../src/voice/visualGuidance";
+import { CAPABILITIES } from "../src/presence-realtime/server/registry";
 
 const KEY = "sk-test-permanent-key-never-in-browser";
 const INSTALL = "3f1c2a9e-8b7d-4c6e-9a1b-2d3e4f5a6b7c";
@@ -38,7 +39,7 @@ test("creates a GPT-Live WebRTC session with the same OPENAI_API_KEY; only the a
   assert.equal(calls[0].init.method, "POST");
   const headers = calls[0].init.headers as Record<string, string>;
   assert.equal(headers.Authorization, `Bearer ${KEY}`);
-  assert.match(headers["OpenAI-Safety-Identifier"], /^scf-[0-9a-f]{40}$/);
+  assert.match(headers["OpenAI-Safety-Identifier"], /^aion-[0-9a-f]{40}$/);
   const payload = JSON.parse(String(calls[0].init.body));
   assert.deepEqual(payload.transport, { type: "webrtc", sdp: OFFER }, "the browser's offer is forwarded unchanged");
   assert.equal(payload.session.model, "gpt-live-1");
@@ -65,7 +66,8 @@ test("the Live backend registers the canonical visual tools; prompts are split, 
   for (const heading of ["Backchannel policy:", "Interruption policy:", "Delegation policy:"]) assert.ok(LIVE_VOICE_INSTRUCTIONS.includes(heading));
   assert.ok(LIVE_BACKEND_INSTRUCTIONS.includes(VISUAL_TOOL_RULES) && PRESENCE_INSTRUCTIONS.includes(VISUAL_TOOL_RULES),
     "Realtime and the Live backend share the visual rules word for word");
-  for (const name of VISUAL_TOOL_NAMES) assert.ok(LIVE_BACKEND_INSTRUCTIONS.includes(name));
+  // The prompts teach the Presence Core's vocabulary (the canonical registry), not the legacy tool list.
+  for (const { tool } of CAPABILITIES) assert.ok(LIVE_BACKEND_INSTRUCTIONS.includes(tool) && PRESENCE_INSTRUCTIONS.includes(tool), `${tool} is described to both backends`);
   assert.ok(LIVE_BACKEND_INSTRUCTIONS.includes("Spirit Connect logo"));
 });
 

@@ -1,6 +1,6 @@
 import type { ClientEvent, FunctionCallItem, RealtimeEvent, ResponseStatus } from "./events";
 import type { ToolRunner } from "../voice/tools/executor";
-import { serializeResult, type ToolResult } from "../voice/tools/results";
+import { serializeResult, type ModelResult } from "../voice/tools/results";
 
 export interface ToolCallRecord {
   callId: string;
@@ -8,7 +8,7 @@ export interface ToolCallRecord {
   arguments: string;
   responseId: string;
   at: number;
-  result?: ToolResult;
+  result?: ModelResult;
   ms?: number;
 }
 
@@ -26,7 +26,7 @@ export interface ToolLoopHost {
 interface ResponseEntry { calls: number; pending: number; finished?: { status: ResponseStatus; spoke: boolean }; settled: boolean }
 
 /**
- * The GA Realtime function-calling lifecycle for SCF's native visual tools:
+ * The GA Realtime function-calling lifecycle for Aion's native visual tools:
  *
  *   response.function_call_arguments.delta  → arguments assembled per call_id
  *   response.function_call_arguments.done   → validate + execute locally (voice keeps playing)
@@ -94,7 +94,7 @@ export class ToolCallLoop {
     if (this.history.length > 20) this.history.shift();
     this.host.onToolStarted?.(record);
     const generation = this.generation;
-    const finish = (result: ToolResult, ms?: number) => {
+    const finish = (result: ModelResult, ms?: number) => {
       if (generation !== this.generation) return;
       record.result = result; record.ms = ms;
       this.host.send({ type: "conversation.item.create", item: { type: "function_call_output", call_id: call.callId, output: serializeResult(result) } });

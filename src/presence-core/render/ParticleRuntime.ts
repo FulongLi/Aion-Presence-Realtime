@@ -94,7 +94,7 @@ export interface RuntimeHandle {
 const STEP = 1 / 120;
 
 /**
- * The WebGPU particle body from SCF Presence: compute-shader physics at a fixed 120 Hz step, instanced
+ * The WebGPU particle body from Aion Presence Realtime: compute-shader physics at a fixed 120 Hz step, instanced
  * microdisc particles and bloom, with adaptive quality. Throws "webgpu-unavailable" / "webgpu-failed" when
  * the browser cannot run it; the caller then falls back to the canvas renderer (see render/index.ts).
  */

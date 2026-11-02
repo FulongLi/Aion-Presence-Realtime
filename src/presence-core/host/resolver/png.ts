@@ -4,7 +4,7 @@ import type { Raster } from "../../visual/types";
 
 /**
  * A small, strict PNG decoder for elevation tiles. Terrarium tiles store metres in their RGB values, so they
- * must be read exactly, with no colour management or premultiplication (SCF decoded them in the browser with
+ * must be read exactly, with no colour management or premultiplication (Realtime decoded them in the browser with
  * `colorSpaceConversion: "none"`; the plugin resolves terrain in Node, where there is no canvas). Supports
  * 8-bit greyscale, RGB, palette, grey+alpha and RGBA, non-interlaced: what tile servers produce. Anything else
  * is refused rather than guessed at.

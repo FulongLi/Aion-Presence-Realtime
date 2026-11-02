@@ -1,5 +1,5 @@
 /**
- * What the local microphone analysis gives the presence each frame (SCF's MicFrame). It is a handful of numbers
+ * What the local microphone analysis gives the presence each frame (Realtime's MicFrame). It is a handful of numbers
  * computed on this device: no audio, no words, nothing recorded, stored or sent.
  */
 export interface MicFrame {
@@ -17,7 +17,7 @@ export interface MicFrame {
 
 export interface MicInput { read(dt: number): MicFrame | null }
 
-/** Root mean square of a block of samples (SCF's audio/analyser.ts). */
+/** Root mean square of a block of samples (Realtime's audio/analyser.ts). */
 export function rms(samples: Float32Array): number {
   let sum = 0;
   for (let i = 0; i < samples.length; i++) sum += samples[i] * samples[i];

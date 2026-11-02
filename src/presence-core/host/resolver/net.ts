@@ -2,7 +2,7 @@ import manifest from "../hostManifest.json" with { type: "json" };
 import { ResolveError } from "../../visual/errors";
 
 /**
- * The resolver's only way onto the network (SCF's visual-resolver/net.ts, run in the local MCP process instead
+ * The resolver's only way onto the network (Realtime's visual-resolver/net.ts, run in the local MCP process instead
  * of the browser). Every request is HTTPS to an allowlisted public data host, refuses redirects, has a timeout,
  * checks the content type and stops reading at a byte limit. It sends only the search term or region (and the
  * plugin's name as User-Agent, which Wikimedia's and OpenStreetMap's usage policies ask for): never repository

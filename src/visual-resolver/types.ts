@@ -18,7 +18,7 @@ export interface Raster { width: number; height: number; data: Uint8ClampedArray
  *   boundaries inside the mark), even density and no photographic vignette.
  * - emoji: one system-font emoji on transparency, only a source shape: density follows alpha, with
  *   extra weight on the silhouette and on colour/luminance boundaries inside it (eyes, mouth), a thin
- *   slab and tones from the emoji's own luminance range. Still SCF particles, never a flat sticker.
+ *   slab and tones from the emoji's own luminance range. Still Aion particles, never a flat sticker.
  * - ink: a procedural monochrome form (a visual form such as the yin-yang): alpha is density, read as a
  *   continuous amount rather than a mask, so a pale wash becomes sparse particles and a full stroke
  *   dense ones; RGB is tone. Edges are weighted, the slab is thin and calm.

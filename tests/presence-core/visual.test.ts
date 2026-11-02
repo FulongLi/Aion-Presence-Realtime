@@ -18,7 +18,7 @@ import type { MorphTarget, PointLayoutTarget, Raster, Raster2DTarget, VisualTarg
 
 const density = (raster: Raster, x: number, y: number) => raster.data[(Math.round(y) * raster.width + Math.round(x)) * 4 + 3] / 255;
 
-// ── Registry (from SCF Presence, plus the symbol pack) ────────────────────────────────────────────────
+// ── Registry (from Aion Presence Realtime, plus the symbol pack) ────────────────────────────────────────────────
 
 test("registry: every form has a well-formed, category-prefixed id and a label, and ids are unique", () => {
   const ids = visualForms.ids();

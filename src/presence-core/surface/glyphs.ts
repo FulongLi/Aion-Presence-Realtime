@@ -4,7 +4,7 @@ import type { Raster } from "../visual/types";
 
 /**
  * Text the body becomes (a word, "48/48", a time), drawn on a canvas that is never shown, then sampled into
- * particles (from SCF Presence's glyph provider).
+ * particles (from Aion Presence Realtime's glyph provider).
  */
 const FONT = '600 {size}px "SF Pro Rounded", ui-rounded, system-ui, -apple-system, "Segoe UI", "PingFang SC", "Noto Sans SC", sans-serif';
 
@@ -39,7 +39,7 @@ export function rasterizeText(text: string): Raster {
 
 /**
  * Decodes an image (any type the browser can draw) into a raster at most `maxSide` across. An SVG is checked,
- * then given explicit pixel dimensions from its viewBox (SCF's svg transform), so vector art is rendered at its
+ * then given explicit pixel dimensions from its viewBox (Realtime's svg transform), so vector art is rendered at its
  * target size; it is only ever drawn through an <img>, which runs no script and loads nothing.
  */
 export async function decodeImage(blob: Blob, maxSide = 512): Promise<Raster> {
@@ -63,7 +63,7 @@ export async function decodeImage(blob: Blob, maxSide = 512): Promise<Raster> {
 }
 
 /**
- * Constructed emoji (SCF's providers/emoji.ts): one emoji drawn with the operating system's own colour emoji
+ * Constructed emoji (Realtime's providers/emoji.ts): one emoji drawn with the operating system's own colour emoji
  * font onto a transparent canvas that is never shown, then sampled into particles. No network, no image
  * search, no bundled emoji images: Apple Color Emoji, Segoe UI Emoji or Noto Color Emoji.
  */

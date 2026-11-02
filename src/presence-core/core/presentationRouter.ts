@@ -154,7 +154,7 @@ export function routePresentation(request: RouteRequest): RouteDecision {
 }
 
 /**
- * How long each part lasts, in seconds (0: until cleared). A body visual is a moment (SCF's hold times); a card
+ * How long each part lasts, in seconds (0: until cleared). A body visual is a moment (Realtime's hold times); a card
  * stays while it is likely still relevant, then goes, so cards never accumulate.
  */
 export const CARD_SECONDS = { text: 20, result: 24, artifact: 60, image: 30, terrain: 30, clock: 12, number: 12, map: 60, music: 180 } as const;

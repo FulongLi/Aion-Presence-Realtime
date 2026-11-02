@@ -14,7 +14,7 @@ export interface TerrainProvider {
 }
 
 /**
- * Real elevation for any named place, keyless (SCF's sources/terrain.ts, run in the local MCP process):
+ * Real elevation for any named place, keyless (Realtime's sources/terrain.ts, run in the local MCP process):
  *
  *   region name ─► the region (Aion's offline world: continents, countries, their parts; else Nominatim/Photon)
  *               ─► its equal-area frame (see visual/geo) ─► the longitude/latitude window it covers

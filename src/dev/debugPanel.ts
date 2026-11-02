@@ -16,7 +16,7 @@ import { AION_TRANSFORM_TESTS, FORM_SAMPLES } from "./formSamples";
 
 /**
  * Development diagnostics, loaded only for `?debug=1` in development builds (or with
- * NEXT_PUBLIC_SCF_DEBUG=1). It never sees the standard API key or the ephemeral secret.
+ * NEXT_PUBLIC_AION_DEBUG=1). It never sees the standard API key or the ephemeral secret.
  * Both voice backends are shown side by side in the same terms, for manual A/B comparison.
  */
 export function attachDebugPanel(container: HTMLElement, { controller, runtime }: {
@@ -40,7 +40,7 @@ export function attachDebugPanel(container: HTMLElement, { controller, runtime }
     const group = el("details"); group.open = open; el("summary", title, group);
     return group;
   };
-  el("strong", "SCF Presence · development");
+  el("strong", "Aion Presence · development");
   const now = () => performance.now() / 1000;
   const fixed = (value: number, digits = 2) => value.toFixed(digits);
   const age = (at: number | null | undefined) => at ? `${Math.round((performance.now() - at) / 1000)} s ago` : "—";
@@ -146,7 +146,7 @@ export function attachDebugPanel(container: HTMLElement, { controller, runtime }
   for (const name of TERRAIN_STYLES) { const option = el("option", name, terrainStyle); option.value = name; }
   button("show_terrain", terrainRow, () => runTool("show_terrain", { region: region.value.trim(), style: terrainStyle.value }));
 
-  // Visual forms: SCF's own visual language, drawn procedurally (no OpenAI, no network, no image search).
+  // Visual forms: Aion's own visual language, drawn procedurally (no OpenAI, no network, no image search).
   const forms = section("visual forms", true);
   for (const group of ["Tao", "Astronomy", "Astrology"] as const) {
     const row = el("div", "", forms);

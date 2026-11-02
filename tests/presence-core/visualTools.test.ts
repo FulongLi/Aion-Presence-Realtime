@@ -58,10 +58,10 @@ test("show_portrait finds the person and presents a portrait-framed picture, wit
     const snapshot = await state(aion);
     assert.equal(snapshot.presentation?.kind, "image");
     const presentation = snapshot.presentation as Extract<HubSnapshot["presentation"], { kind: "image" }>;
-    assert.equal(presentation.fit, "portrait", "the surface frames it with SCF's portrait crop and sampling");
+    assert.equal(presentation.fit, "portrait", "the surface frames it with Realtime's portrait crop and sampling");
     assert.equal(presentation.route, "hybrid", "a recognizable portrait: particles and the original photograph");
     assert.equal(presentation.reason, "portrait-hybrid");
-    assert.equal(presentation.bodyHold, 14, "the particle portrait is a moment (SCF's hold)");
+    assert.equal(presentation.bodyHold, 14, "the particle portrait is a moment (Realtime's hold)");
     assert.equal(presentation.cardHold, 30, "the photograph stays a little longer");
     assert.deepEqual([presentation.width, presentation.height, presentation.origin], [900, 1200, "lookup"], "the card knows the original's size");
     assert.equal(presentation.credit, "Wikipedia · free (Wikimedia Commons)");
@@ -113,7 +113,7 @@ test("show_terrain resolves real elevation into a height field the surface can s
   } finally { await aion.close(); }
 });
 
-test("clock, number, symbol and emoji are drawn locally, with SCF's validation", async () => {
+test("clock, number, symbol and emoji are drawn locally, with Realtime's validation", async () => {
   const aion = await connectAion({ now: () => new Date(2026, 9, 1, 9, 5) });
   try {
     const clock = output(await aion.call("show_clock", {}));

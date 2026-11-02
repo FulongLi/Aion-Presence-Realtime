@@ -2,7 +2,7 @@ import type { MorphTarget } from "../visual-actions/types";
 import type { VisualTarget } from "../visual-resolver/types";
 
 /**
- * Visual forms: SCF's own visual language. Where show_image retrieves a picture from outside, a visual
+ * Visual forms: Aion's own visual language. Where show_image retrieves a picture from outside, a visual
  * form is a concept the body already knows how to draw (a yin-yang, a trigram, a constellation, a zodiac
  * glyph), built procedurally on the device into an ordinary VisualTarget. Forms come in packs; the
  * registry (registry.ts) is the one extension point: a new pack is data plus a renderer, never new tools,

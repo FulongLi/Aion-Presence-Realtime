@@ -116,7 +116,7 @@ export const systemClock: StoreClock = {
 };
 
 /**
- * A hold is time spent *formed* (as in SCF). The body first takes about this long to form, so the store keeps
+ * A hold is time spent *formed* (as in Realtime). The body first takes about this long to form, so the store keeps
  * the presentation that much longer before releasing it.
  */
 export const FORMING_SECONDS = 1.6;

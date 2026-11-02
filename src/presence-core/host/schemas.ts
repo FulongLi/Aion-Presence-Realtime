@@ -47,7 +47,7 @@ const hold = z.number().min(0).max(LIMITS.hold.max)
 /** How the user should see it (the Presentation Router decides by default; see core/presentationRouter.ts). */
 const presentation = z.enum(PRESENTATION_PREFERENCES).describe("auto (default): Aion decides; body: particles; card: exact card; hybrid: both.");
 
-/** A free-text field checked by one of SCF's validators after its whitespace is tidied. */
+/** A free-text field checked by one of Realtime's validators after its whitespace is tidied. */
 const checked = (max: number, valid: (value: string) => boolean, what: string) => z.string().max(max * 4).transform((value, ctx) => {
   const clean = tidy(value);
   if (!valid(clean)) { ctx.addIssue({ code: "custom", message: what }); return z.NEVER; }

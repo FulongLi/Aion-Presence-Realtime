@@ -3,7 +3,7 @@ import type { GeoMap } from "./geo/map";
 import type { Frame } from "./geo/projection";
 
 /**
- * The visual vocabulary the particle body understands (from SCF Presence's Visual Resolver). The body only
+ * The visual vocabulary the particle body understands (from Aion Presence Realtime's Visual Resolver). The body only
  * ever sees a VisualTarget; whether it came from a procedural visual form, a glyph, an image or real elevation
  * data stays outside the renderer.
  */
@@ -11,7 +11,7 @@ import type { Frame } from "./geo/projection";
 /** An RGBA image, row-major, 4 bytes per pixel. */
 export interface Raster { width: number; height: number; data: Uint8ClampedArray }
 
-/** What kind of picture an image request is after. It steers provider order, ranking and cropping (SCF). */
+/** What kind of picture an image request is after. It steers provider order, ranking and cropping (Realtime). */
 export const IMAGE_INTENTS = ["portrait", "celebrity", "object", "vehicle", "product", "reference", "map", "general"] as const;
 export type ImageIntent = typeof IMAGE_INTENTS[number];
 export const PORTRAIT_INTENTS: readonly ImageIntent[] = ["portrait", "celebrity"];
@@ -27,7 +27,7 @@ export const fitForIntent = (intent: ImageIntent): ImageFit =>
 
 /**
  * How a portrait is composed: heritage (the default since v0.4.1: a 3:4 oval with a soft edge and a silver particle
- * outline, like an antique oval portrait or a locket; see oval.ts) or classic (SCF's head-and-shoulders band). Only
+ * outline, like an antique oval portrait or a locket; see oval.ts) or classic (Realtime's head-and-shoulders band). Only
  * portraits have a style.
  */
 export const PORTRAIT_STYLES = ["heritage", "classic"] as const;
@@ -47,7 +47,7 @@ export function portraitStyleFor(fit: ImageFit | undefined, style?: PortraitStyl
 export const TERRAIN_STYLES = ["terrain", "topography", "relief", "heightmap"] as const;
 export type TerrainStyle = typeof TERRAIN_STYLES[number];
 
-/** SCF's simple symbols (drawn by the symbol form pack). */
+/** Realtime's simple symbols (drawn by the symbol form pack). */
 export const SYMBOL_NAMES = [
   "check", "cross", "heart", "star", "question", "exclamation",
   "arrow-up", "arrow-down", "arrow-left", "arrow-right", "plus", "minus",

@@ -28,3 +28,7 @@ npm-debug.log*
 /presence-assets/packs/chinese-writing/strokes.ahpk
 /presence-assets/packs/chinese-writing/dictionary.ahpk
 /presence-assets/assets/cards/transformer.glb
+
+# Python bytecode (FreeCAD compiles the worker when it runs)
+__pycache__/
+*.pyc

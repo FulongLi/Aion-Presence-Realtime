@@ -7,7 +7,7 @@ export type { ConnectionState };
 export type SessionPhase = ConnectionState | "listening" | "thinking" | "speaking";
 
 /**
- * What SCF tracks about the Realtime conversation. OpenAI keeps the conversation itself; this is only
+ * What Aion tracks about the Realtime conversation. OpenAI keeps the conversation itself; this is only
  * turn/response/audio timing for the body, plus counters for development diagnostics.
  */
 export interface RealtimePresenceState {

@@ -1,6 +1,6 @@
 /**
- * The small slice of the GA Realtime server event stream SCF needs, normalized.
- * OpenAI owns the conversation; SCF only reads session, turn, response, audio-buffer, tool and error
+ * The small slice of the GA Realtime server event stream Aion needs, normalized.
+ * OpenAI owns the conversation; Aion only reads session, turn, response, audio-buffer, tool and error
  * events. Everything else is passed through as "ignored" (visible in debug only).
  */
 export interface ResponseUsage {
@@ -137,7 +137,7 @@ export function parseServerEvent(data: unknown): RealtimeEvent {
   }
 }
 
-/** GA client events SCF sends over the data channel. */
+/** GA client events Aion sends over the data channel. */
 export type ClientEvent =
   | { type: "conversation.item.create"; item: { type: "function_call_output"; call_id: string; output: string } }
   /** `response.instructions` makes this one response say a given line (Aion's first greeting). */

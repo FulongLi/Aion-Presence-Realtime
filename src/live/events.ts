@@ -1,11 +1,11 @@
 /**
- * The slice of the GPT-Live data-channel protocol SCF needs, normalized. Event names follow the current
+ * The slice of the GPT-Live data-channel protocol Aion needs, normalized. Event names follow the current
  * GPT-Live reference (developers.openai.com/api/reference/resources/live); none of them are Realtime
  * events. Live has no speech-started/stopped, audio-done or barge-in events: the assistant's audio
  * (on the WebRTC media track) is the only speaking signal, and transcript deltas show who is talking.
  *
  * Responses delegation arrives as `response.event` envelopes wrapping ordinary Responses streaming
- * events; the nested ones SCF uses are normalized to `backend.*` events here.
+ * events; the nested ones Aion uses are normalized to `backend.*` events here.
  */
 import type { FunctionCallItem } from "../realtime/events";
 
@@ -132,7 +132,7 @@ export function parseLiveEvent(data: unknown): LiveEvent {
 }
 
 /**
- * Client events SCF sends on a Live data channel. The session is started by the server's HTTP request,
+ * Client events Aion sends on a Live data channel. The session is started by the server's HTTP request,
  * so there is no `session.start` here; the server also restricts the frontend to exactly these types.
  */
 export type LiveClientEvent =

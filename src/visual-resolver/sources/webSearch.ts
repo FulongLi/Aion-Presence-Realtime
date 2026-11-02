@@ -2,7 +2,7 @@ import { safeFetch, sniffImage, type Fetcher } from "../net";
 import { ResolveError, type ImageProvider } from "../types";
 
 /**
- * Optional web-scale image search through SCF's own server route (POST /api/visual/image). The route
+ * Optional web-scale image search through Aion's own server route (POST /api/visual/image). The route
  * holds the provider key (BRAVE_SEARCH_API_KEY), searches, picks and downloads one image itself and
  * returns only its bytes, so the browser never sees a key or talks to an arbitrary image host.
  * Without a key the route answers 503 once and the provider is skipped for the rest of the page.

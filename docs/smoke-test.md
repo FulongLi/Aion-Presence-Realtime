@@ -1,5 +1,12 @@
 # Manual smoke test (needs a real OpenAI API key)
 
+> v0.2.0: the visual tools are now the Presence Core's (see [PARITY.md](PARITY.md)); a request such as "go back to the
+> sphere" calls `set_body_form {body: "sphere"}` and "that's enough" calls `clear_presentation` (the legacy
+> `return_to_sphere` no longer exists for the voice models). Add these to the run: "Plan a hiking route up Ben Nevis",
+> "Show me Saturn in 3D", "Write 永 for me", "Show me your eyes", "Make your colour gold", and, with FreeCAD installed,
+> "Make a copper bar 100 by 10 by 5 millimetres and tell me its resistance with one millivolt across it". Watch that the
+> body listens while you speak, moves with Aion's real voice, and that the first visit speaks the welcome once.
+
 Unit tests mock every Realtime, GPT-Live and WebRTC surface. This checklist is the one end-to-end test that
 talks to OpenAI. It uses your API key and is billed to your account. Run sections 1–5 with the Realtime
 backend (the default, or `/?voice=realtime&debug=1`), then section 6 with GPT-Live.
@@ -83,7 +90,7 @@ Expected:
 | Block the microphone in site settings and reload | A one-line notice explains how to allow it. |
 | Debug → **disconnect** | The body goes idle, and only one session is ever created (check the Network tab for `/v1/realtime/calls`). |
 
-## 6. GPT-Live (`/?voice=live&debug=1`, or `SCF_VOICE_BACKEND=live`)
+## 6. GPT-Live (`/?voice=live&debug=1`, or `AION_VOICE_BACKEND=live`)
 
 Same key, no other setup. Debug → **voice backend** should show `backend live`, `live model gpt-live-1 · backend model gpt-5.6-terra`, a `live_…` session id after `session.started`, and the connect time.
 

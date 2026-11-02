@@ -122,7 +122,7 @@ function provider(name: string, candidates: Partial<ImageCandidate>[], calls: st
   };
 }
 
-test("portraits follow SCF's chain: Wikipedia first, and the result is framed as a portrait", async () => {
+test("portraits follow Realtime's chain: Wikipedia first, and the result is framed as a portrait", async () => {
   assert.deepEqual(PROVIDER_ORDER.portrait, ["wikipedia", "web", "openverse", "commons"]);
   const calls: string[] = [];
   const resolver = new VisualResolver({ imageProviders: [provider("openverse", [{}], calls), provider("wikipedia", [{ title: "Nikola Tesla", pageUrl: "https://en.wikipedia.org/wiki/Nikola_Tesla" }], calls)] });

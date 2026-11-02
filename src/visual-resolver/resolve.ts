@@ -23,7 +23,7 @@ export interface ResolverDeps {
   decodeImage: (blob: Blob) => Promise<Raster>;
   /** Constructed visuals, drawn locally (browser: canvas; emoji from the system emoji font). */
   glyphs: { text: (value: string) => Raster; symbol: (name: SymbolName) => Raster; emoji: (value: string) => Raster };
-  /** Visual forms (SCF's own visual language), drawn procedurally. Default: every registered pack. */
+  /** Visual forms (Aion's own visual language), drawn procedurally. Default: every registered pack. */
   forms?: VisualFormRegistry;
   request?: Fetcher;
   now?: () => Date;

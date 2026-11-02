@@ -6,7 +6,7 @@ import type { BackendStatus, BackendUsage, LiveCloseReason, LiveEvent } from "./
 export type LivePhase = ConnectionState | "listening" | "thinking" | "speaking";
 
 /**
- * What SCF tracks about a GPT-Live conversation — only what the body and the debug panel need.
+ * What Aion tracks about a GPT-Live conversation — only what the body and the debug panel need.
  * GPT-Live is full duplex and has no turn or audio-done events, so this state is built from transcript
  * activity and delegation lifecycle; the assistant's actual audio decides speaking in the PresenceEngine.
  */
