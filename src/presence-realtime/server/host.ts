@@ -5,6 +5,9 @@ import { PresenceHub } from "../../presence-core/host/hub/hub";
 import { PresenceLink, type PresenceBackend } from "../../presence-core/host/hub/link";
 import type { HubCommand, HubSnapshot, SurfaceReport } from "../../presence-core/host/hub/protocol";
 import { createAionServer, type AionServerOptions } from "../../presence-core/host/mcp/server";
+import { FreecadBackend } from "../../presence-core/host/cad/freecad";
+import { freecadBridge } from "../../presence-core/host/sim/freecadBridge";
+import { SimulationService } from "../../presence-core/host/sim/service";
 import { tileAllowed } from "../../presence-core/host/route/tiles";
 import { routeBox } from "../../presence-core/visual/geo/route";
 import { errorCode } from "../../presence-core/visual/errors";
@@ -66,7 +69,9 @@ const DEFAULT_TIMEOUT_MS = 30_000;
 export class PresenceHost {
   readonly hub: PresenceHub;
   lastUsed = Date.now();
-  private constructor(private readonly options: PresenceHostOptions, private readonly link: InProcessLink, private readonly client: Client) {
+  private constructor(private readonly options: PresenceHostOptions, private readonly link: InProcessLink, private readonly client: Client,
+    /** The FreeCAD worker this host started (if any): stopped with the host, so an evicted viewer leaves no process behind. */
+    private readonly cad: FreecadBackend | null) {
     this.hub = link.current.hub;
   }
 
@@ -82,9 +87,12 @@ export class PresenceHost {
       ...(existsSync(pack) ? { AION_CHINESE_PACK: pack } : {}),
       ...options.env, AION_CAD_WORKSPACE: cadWorkspace, AION_SIM_WORKSPACE: join(options.home, "sim"),
     };
+    // The host owns the CAD backend and the simulation service (the Plugin's server would make its own and rely on process exit).
+    const cad = options.overrides?.cad ?? (options.engineering.cad && options.cadScript ? new FreecadBackend({ script: options.cadScript, env }) : null);
+    const sim = options.overrides?.sim ?? new SimulationService({ root: env.AION_SIM_WORKSPACE!, env, cad: cad && options.engineering.simulation ? freecadBridge(cad) : null });
     const server = createAionServer({
       link, page: () => "", version: options.version, env, assetsDir: options.assetsDir,
-      cadScript: options.engineering.cad ? options.cadScript : undefined,
+      ...(cad ? { cad } : {}), sim,
       // Realtime never launches windows or desktop applications on the server's machine.
       openWindow: async () => false,
       openFreecad: async () => false,
@@ -94,7 +102,7 @@ export class PresenceHost {
     await server.connect(serverSide);
     const client = new Client({ name: "aion-presence-realtime", version: options.version }, { capabilities: {} });
     await client.connect(clientSide);
-    return new PresenceHost(options, link, client);
+    return new PresenceHost(options, link, client, options.overrides?.cad ? null : cad);
   }
 
   /** The Presence Core's tools as its tool server lists them (schemas from the Plugin's zod definitions). */
@@ -165,6 +173,7 @@ export class PresenceHost {
   }
 
   async close() {
+    this.cad?.stop();
     await this.client.close().catch(() => {});
     await this.link.close().catch(() => {});
   }
