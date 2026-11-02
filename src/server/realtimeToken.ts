@@ -1,10 +1,11 @@
 import { buildSessionConfig, sessionOptionsFromEnv, type RealtimeSessionConfig } from "../realtime/session";
 import type { SessionTool } from "../voice/tools/definitions";
+import { setting } from "./settings";
 
 /**
  * Server-side minting of ephemeral Realtime client secrets (GA: POST /v1/realtime/client_secrets).
  *
- *   browser ── POST /api/realtime/token ──► SCF server ── OPENAI_API_KEY ──► OpenAI
+ *   browser ── POST /api/realtime/token ──► Aion server ── OPENAI_API_KEY ──► OpenAI
  *   browser ◄──────── { value: "ek_…" } ──────────────────────────────────────┘
  *
  * The standard API key is used only here and never appears in a response. The session (model, voice,
@@ -54,13 +55,13 @@ export function originAllowed(request: Request, extra: string | undefined): bool
 
 /**
  * OpenAI recommends a stable, privacy-preserving per-user safety identifier for ephemeral sessions,
- * set server-side. Without accounts, SCF hashes the browser's random installation id with a server salt.
+ * set server-side. Without accounts, Aion hashes the browser's random installation id with a server salt.
  */
 export async function safetyIdentifier(installationId: unknown, salt: string | undefined): Promise<string | undefined> {
   if (typeof installationId !== "string" || !INSTALLATION.test(installationId)) return undefined;
-  const bytes = new TextEncoder().encode(`${salt || "scf-presence-realtime"}:${installationId}`);
+  const bytes = new TextEncoder().encode(`${salt || "aion-presence-realtime"}:${installationId}`);
   const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", bytes));
-  return `scf-${Array.from(digest.subarray(0, 20), byte => byte.toString(16).padStart(2, "0")).join("")}`;
+  return `aion-${Array.from(digest.subarray(0, 20), byte => byte.toString(16).padStart(2, "0")).join("")}`;
 }
 
 async function readBody(request: Request): Promise<Record<string, unknown> | null> {
@@ -84,13 +85,13 @@ export async function createRealtimeToken(
     ({ status, body: detail && env.NODE_ENV !== "production" ? { error, detail } : { error } });
   const apiKey = env.OPENAI_API_KEY?.trim();
   if (!apiKey) return fail(503, "not-configured");
-  if (!originAllowed(request, env.SCF_ALLOWED_ORIGINS)) return fail(403, "forbidden-origin");
+  if (!originAllowed(request, setting(env, "ALLOWED_ORIGINS"))) return fail(403, "forbidden-origin");
   const body = await readBody(request);
   if (!body) return fail(400, "bad-request");
 
   const payload = clientSecretRequest(env, tools);
   const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
-  const safetyId = await safetyIdentifier(body.installationId, env.SCF_SAFETY_ID_SALT);
+  const safetyId = await safetyIdentifier(body.installationId, setting(env, "SAFETY_ID_SALT"));
   if (safetyId) headers["OpenAI-Safety-Identifier"] = safetyId;
 
   let response: Response;

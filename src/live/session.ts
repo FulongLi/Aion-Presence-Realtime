@@ -62,7 +62,7 @@ export function liveOptionsFromEnv(env: Record<string, string | undefined>): Liv
 }
 
 /**
- * Responses delegation with SCF's visual tools: GPT-Live listens, speaks and decides when help is needed;
+ * Responses delegation with Aion's visual tools: GPT-Live listens, speaks and decides when help is needed;
  * the Responses backend reasons and selects tools; the browser executes them with the same ToolExecutor
  * the Realtime path uses. The tool list is the canonical `visualTools` — no second schema. Tool calls are
  * sequential (the migration guide's recommended starting point, and one visual at a time anyway).

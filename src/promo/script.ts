@@ -1,11 +1,11 @@
 /**
- * The SCF Presence film, as authored: every word on screen, every spoken line, the five real visual tool
+ * The Aion Presence film, as authored: every word on screen, every spoken line, the five real visual tool
  * calls and the timing of each beat. Change copy, dialogue or timing here; `timeline.ts` compiles this
  * into the deterministic master timeline and `docs/promo.md` explains the knobs.
  */
 
 export const FILM = {
-  title: "SCF Presence",
+  title: "Aion Presence",
   fps: 60,
   width: 1920,
   height: 1080,

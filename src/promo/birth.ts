@@ -2,7 +2,7 @@ import type { FormationPlan } from "../particle/formation";
 import { seededRandom } from "./random";
 
 /**
- * Scene 1, the birth of presence: how the SCF body assembles itself from nothing (see
+ * Scene 1, the birth of presence: how the Aion body assembles itself from nothing (see
  * particle/formation.ts for the path every grain follows).
  *
  * - A handful of grains appear low in the frame and rise slowly; more follow, then many.

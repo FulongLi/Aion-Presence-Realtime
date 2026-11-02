@@ -11,7 +11,7 @@ const child = spawn(process.execPath, [path.join(ROOT, "node_modules/next/dist/b
 const url = `http://localhost:${port}/promo`;
 const announce = async () => {
   for (let i = 0; i < 120; i++) {
-    try { if ((await fetch(url)).ok) { console.log(`\n  ▶ The SCF Presence film: ${url}\n    Space play/pause · F fullscreen · M mute · C subtitles · Esc controls\n`); return; } } catch { /* starting */ }
+    try { if ((await fetch(url)).ok) { console.log(`\n  ▶ The Aion Presence film: ${url}\n    Space play/pause · F fullscreen · M mute · C subtitles · Esc controls\n`); return; } } catch { /* starting */ }
     await new Promise(resolve => setTimeout(resolve, 500));
   }
 };

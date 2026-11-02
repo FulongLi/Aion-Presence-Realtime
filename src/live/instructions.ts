@@ -10,7 +10,7 @@ const { name, nature, creatorCompany } = AION_IDENTITY;
  *
  * - the live voice prompt: short — personality, spoken behaviour, and when to delegate. It follows the
  *   GPT-Live prompting template's Backchannel / Interruption / Delegation policy headings.
- * - the backend prompt: the Responses model that reasons and selects SCF's visual tools. The detailed
+ * - the backend prompt: the Responses model that reasons and selects Aion's visual tools. The detailed
  *   visual rules live here, shared word-for-word with the Realtime prompt.
  */
 export const LIVE_VOICE_INSTRUCTIONS = `${identityGuidance()}

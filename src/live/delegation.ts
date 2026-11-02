@@ -38,7 +38,7 @@ interface Delegation { id: string; createdAt: number; called: boolean; active: b
 interface BackendResponse { delegationId?: string; calls: number; pending: number; finished?: BackendStatus; settled: boolean }
 
 /**
- * GPT-Live Responses delegation for SCF's visual tools (current GPT-Live delegation guide):
+ * GPT-Live Responses delegation for Aion's visual tools (current GPT-Live delegation guide):
  *
  *   session.delegation.created { target: "responses" }     → a delegation is active (body may think)
  *   response.event › response.created                      → the backend response id for that delegation
@@ -77,7 +77,7 @@ export class LiveDelegationLoop {
   handle(event: LiveEvent) {
     switch (event.type) {
       case "delegation.created":
-        // Client delegation is not configured by SCF; its notices carry no work for this loop.
+        // Client delegation is not configured by Aion; its notices carry no work for this loop.
         if (event.target === "responses") this.start(event.delegationId);
         break;
       case "backend.response.started": {
@@ -180,5 +180,5 @@ export class LiveDelegationLoop {
     this.finish(entry.delegationId, entry.finished);
   }
 
-  private eventId(kind: string) { return `scf_${kind}_${++this.sequence}`; }
+  private eventId(kind: string) { return `aion_${kind}_${++this.sequence}`; }
 }

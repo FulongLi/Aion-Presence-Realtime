@@ -35,7 +35,7 @@ test("net: only HTTPS allowlisted hosts, no credentials, ports or oversized URLs
   assert.equal(checkedURL("https://en.wikipedia.org/w/api.php", [HOSTS.wikipedia]).hostname, "en.wikipedia.org");
   assert.equal(checkedURL("https://zh.wikipedia.org/w/api.php", [HOSTS.wikipedia]).hostname, "zh.wikipedia.org");
   assert.throws(() => checkedURL("https://en.wikipedia.org.evil.test/", [HOSTS.wikipedia]));
-  // SCF's own routes are same-origin only.
+  // Aion's own routes are same-origin only.
   assert.equal(checkedURL("/api/visual/image", [], "http://localhost:3000").pathname, "/api/visual/image");
   assert.throws(() => checkedURL("https://evil.test/api", [], "http://localhost:3000"));
 });
@@ -217,7 +217,7 @@ test("no-result handling: not-found when nothing matched, unavailable when sourc
   await assert.rejects(resolveImage("Tesla Model Y", "vehicle", { providers: invalid, decode: badDecode, request }, signal(), trace()), /image-unavailable/);
 });
 
-test("the web provider only talks to SCF's own route and switches itself off without a key", async () => {
+test("the web provider only talks to Aion's own route and switches itself off without a key", async () => {
   let calls = 0;
   const off = (async (input: URL, init?: RequestInit) => {
     calls++;

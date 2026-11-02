@@ -1,12 +1,12 @@
 /**
- * npm run promo:render — exports the SCF Presence film from the real runtime.
+ * npm run promo:render — exports the Aion Presence film from the real runtime.
  *
  *   next build → next start → headless Chrome (real WebGPU) → /promo?render=1
  *     → preload (real Visual Resolver) → offline soundtrack (48 kHz)
  *     → frame i at t = i / 60, captured exactly → ffmpeg (H.264 + AAC, optional ProRes master)
  *
  * Options:
- *   --out <file>               default output/scf-presence-promo-1080p.mp4
+ *   --out <file>               default output/aion-presence-promo-1080p.mp4
  *   --master                   also write a ProRes 422 HQ + 24-bit PCM master (.mov)
  *   --no-subtitles             render without subtitles
  *   --stills [auto|t1,t2,…]    only capture PNG stills (key moments, or seconds) into output/stills
@@ -24,7 +24,7 @@ import path from "node:path";
 import { chromium, type Browser, type CDPSession, type Page } from "playwright-core";
 import { ROOT, fail, ffmpegEncoders, findFfmpeg, freePort, megabytes, parseArgs, run, seconds, startServer } from "./lib";
 import type { PreparedReport } from "../../src/promo/player";
-import type {} from "../../src/promo/PromoExperience"; // window.__scfPromo
+import type {} from "../../src/promo/PromoExperience"; // window.__aionPromo
 
 const args = parseArgs(process.argv.slice(2));
 const OUTPUT = path.join(ROOT, "output");
@@ -67,9 +67,9 @@ async function main() {
   const url = `${base}/promo?render=1${subtitles ? "" : "&subtitles=0"}`;
   console.log(`▸ Opening ${url}`);
   await page.goto(url, { waitUntil: "load" });
-  await page.waitForFunction(() => Boolean(window.__scfPromo), null, { timeout: 60_000 });
+  await page.waitForFunction(() => Boolean(window.__aionPromo), null, { timeout: 60_000 });
   console.log("▸ Preparing Presence (resolving every scene through the real Visual Resolver)…");
-  const report: PreparedReport = await page.evaluate(() => window.__scfPromo!.ready).catch(error => {
+  const report: PreparedReport = await page.evaluate(() => window.__aionPromo!.ready).catch(error => {
     fail(`the film could not be prepared: ${error instanceof Error ? error.message : error}${problems.length ? `\n${problems.join("\n")}` : ""}`);
   });
   for (const visual of report.visuals) console.log(`  ${visual.id.padEnd(8)} ${visual.kind.padEnd(18)} ${visual.provider} ${visual.source ? `· ${visual.source.slice(0, 70)}` : ""}`);
@@ -87,14 +87,14 @@ async function main() {
   let rendered = 0;
   const renderTo = async (index: number, present: boolean) => {
     // Frames before the one we want are simulated without waiting for presentation.
-    if (index > rendered) await page.evaluate(async ([from, to]) => { for (let i = from; i < to; i++) await window.__scfPromo!.renderFrame(i, false); }, [rendered, index] as const);
-    await page.evaluate(([i, p]) => window.__scfPromo!.renderFrame(i, p), [index, present] as const);
+    if (index > rendered) await page.evaluate(async ([from, to]) => { for (let i = from; i < to; i++) await window.__aionPromo!.renderFrame(i, false); }, [rendered, index] as const);
+    await page.evaluate(([i, p]) => window.__aionPromo!.renderFrame(i, p), [index, present] as const);
     rendered = index + 1;
   };
 
   // 3 · Stills (review, and the pipeline check).
   if (stillsArg !== undefined || check) {
-    const moments = await page.evaluate(() => window.__scfPromo!.moments());
+    const moments = await page.evaluate(() => window.__aionPromo!.moments());
     const wanted = stillsArg && stillsArg !== "auto"
       ? stillsArg.split(",").map(Number).filter(Number.isFinite).map(t => ({ label: `t${t.toFixed(2)}`, t }))
       : moments;
@@ -111,16 +111,16 @@ async function main() {
     if (!check) { await finish(browser, stop, problems); return; }
     // A fresh page for the encode check: the film always renders from frame 0.
     await page.reload({ waitUntil: "load" });
-    await page.waitForFunction(() => Boolean(window.__scfPromo), null, { timeout: 60_000 });
-    await page.evaluate(() => window.__scfPromo!.ready);
+    await page.waitForFunction(() => Boolean(window.__aionPromo), null, { timeout: 60_000 });
+    await page.evaluate(() => window.__aionPromo!.ready);
     rendered = 0;
   }
 
   // 4 · The soundtrack, rendered offline in the page by the same graph that plays live.
   console.log("▸ Rendering the soundtrack offline…");
-  const wav = Buffer.from(await page.evaluate(() => window.__scfPromo!.renderAudio()), "base64");
+  const wav = Buffer.from(await page.evaluate(() => window.__aionPromo!.renderAudio()), "base64");
   const suffix = noDialogue ? "-no-dialogue" : subtitles ? "" : "-clean";
-  const defaultOut = path.join(OUTPUT, check ? "check/scf-presence-promo-check.mp4" : `scf-presence-promo-1080p${suffix}.mp4`);
+  const defaultOut = path.join(OUTPUT, check ? "check/aion-presence-promo-check.mp4" : `aion-presence-promo-1080p${suffix}.mp4`);
   const out = path.resolve(ROOT, args.string("out") ?? defaultOut);
   mkdirSync(path.dirname(out), { recursive: true });
   const audioFile = out.replace(/\.mp4$/i, "") + "-audio.wav";

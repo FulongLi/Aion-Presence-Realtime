@@ -4,12 +4,12 @@ import { IMAGE_INTENTS, SYMBOL_NAMES, TERRAIN_STYLES } from "../../visual-action
 import { FORM_NAME_MAX, visualForms } from "../../visual-forms";
 
 /**
- * SCF's visual function tools: the AI's intentional channel to its particle body. This is the one
+ * Aion's visual function tools: the AI's intentional channel to its particle body. This is the one
  * canonical definition for every voice backend — declared on the Realtime session (`session.tools`)
  * and on GPT-Live's Responses backend (`delegation.responses.tools`) — and every call is executed in
  * the browser by the same ToolExecutor. No MCP, no relay, no transcript inference. Keep the set
  * deliberately small: two open tools (show_image, show_terrain) backed by the Visual Resolver, one tool
- * for SCF's own visual language (show_form, every registered visual form), one open expressive tool
+ * for Aion's own visual language (show_form, every registered visual form), one open expressive tool
  * (show_emoji, any single emoji, drawn locally), plus a few convenience shapes. `set_body_form` is the one
  * tool that is not a temporary visual: it changes Aion's persistent body (sphere or figure).
  */
@@ -71,7 +71,7 @@ export const visualTools: readonly VisualFunctionTool[] = [
     type: "function",
     name: "show_image",
     description: "Form a picture of almost anything with your particle body: a person, vehicle, product, object, "
-      + "animal, building, place, artwork, logo, map or a reference image of an idea. SCF first checks its curated local "
+      + "animal, building, place, artwork, logo, map or a reference image of an idea. Aion first checks its curated local "
       + `assets (such as the ${AION_IDENTITY.creatorCompany} company logo), then searches open image sources. Use when seeing it `
       + "materially helps, e.g. the user asks what something looks like or wants to see it.",
     parameters: object({
@@ -93,7 +93,7 @@ export const visualTools: readonly VisualFunctionTool[] = [
   {
     type: "function",
     name: "show_form",
-    description: "Form a symbol or figure from SCF's own visual language directly with your particle body. It is drawn "
+    description: "Form a symbol or figure from Aion's own visual language directly with your particle body. It is drawn "
       + "procedurally on the device, with no image search: Taoist symbols (the yin-yang/taiji, the yin and yang lines, the "
       + "eight trigrams 乾 兑 离 震 巽 坎 艮 坤 and the bagua), constellations as star maps, the twelve zodiac signs and the "
       + "planetary symbols. Always prefer it to show_image for these. Pass a form id from the list, or a plain name in "

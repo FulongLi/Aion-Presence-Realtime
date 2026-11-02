@@ -21,7 +21,7 @@ export function createPerformance(timeline: Timeline, targets: SceneTargets, voi
   onFailure?: (error: PromoError) => void) {
   const engine = new PresenceEngine();
   const visual = new VisualActionController(cachedResolver(targets), (error, action) => {
-    if (process.env.NODE_ENV === "development") console.error("[SCF promo] a prepared visual was not available", action, error);
+    if (process.env.NODE_ENV === "development") console.error("[Aion promo] a prepared visual was not available", action, error);
   });
   const executor = new ToolExecutor(visual, {
     budgetMs: 1500,

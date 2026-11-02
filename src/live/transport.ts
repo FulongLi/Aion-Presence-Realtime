@@ -2,7 +2,7 @@ import { installationId } from "../realtime/identity";
 import { LiveConnectError, type LiveEnvironment, type LivePeerLike, type LiveSessionAnswer } from "./client";
 
 /**
- * GPT-Live WebRTC in the browser: the SDP offer goes to SCF's own server route, which creates the session
+ * GPT-Live WebRTC in the browser: the SDP offer goes to Aion's own server route, which creates the session
  * with OPENAI_API_KEY (POST /v1/live/sessions) and returns only the SDP answer and session metadata.
  * Unlike the Realtime path there is no ephemeral client secret: the browser never talks to OpenAI's HTTP
  * API and never holds any credential.

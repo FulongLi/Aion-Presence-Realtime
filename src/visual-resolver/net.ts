@@ -4,7 +4,7 @@ import { ResolveError } from "./types";
  * The resolver's only way onto the network. Every request is anonymous (no cookies or credentials),
  * HTTPS-only to an allowlisted host, refuses redirects, has a timeout, checks the content type and
  * stops reading at a byte limit. The browser never holds a provider secret; keyed providers go
- * through SCF's own server route (same origin).
+ * through Aion's own server route (same origin).
  */
 export type Fetcher = typeof fetch;
 
@@ -90,7 +90,7 @@ export interface FetchOptions {
   signal: AbortSignal;
   request?: Fetcher;
   timeoutMs?: number;
-  /** Same-origin base for SCF's own routes (browser only). */
+  /** Same-origin base for Aion's own routes (browser only). */
   base?: string;
   init?: RequestInit;
   referrer?: ReferrerPolicy;

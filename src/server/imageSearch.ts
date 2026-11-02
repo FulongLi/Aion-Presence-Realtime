@@ -3,13 +3,14 @@ import { fetchImage, fetchJSON, overlap, type Fetcher } from "../visual-resolver
 import { rankCandidates } from "../visual-resolver/providers/rank";
 import type { ImageCandidate } from "../visual-resolver/types";
 import { originAllowed } from "./realtimeToken";
+import { setting } from "./settings";
 
 /**
  * Optional server-side image search (POST /api/visual/image) for providers that need a secret key.
  * Today: Brave Search's image API (BRAVE_SEARCH_API_KEY). The key is read only here, at request time.
  *
- *   browser ── { query, intent } ──► SCF server ── key ──► api.search.brave.com (search)
- *   browser ◄──── image bytes ───── SCF server ◄────────── imgs.search.brave.com (thumbnail)
+ *   browser ── { query, intent } ──► Aion server ── key ──► api.search.brave.com (search)
+ *   browser ◄──── image bytes ───── Aion server ◄────────── imgs.search.brave.com (thumbnail)
  *
  * Not an open proxy: the server only downloads thumbnails from Brave's own image host, with the same
  * guards as the browser (HTTPS, no redirects, timeouts, byte limit, MIME and magic-byte checks), and
@@ -52,7 +53,7 @@ export async function searchWebImage(request: Request, env: Record<string, strin
   const fail = (status: number, error: string): ImageRouteResponse => ({ status, body: { error } });
   const key = env.BRAVE_SEARCH_API_KEY?.trim();
   if (!key) return fail(503, "not-configured");
-  if (!originAllowed(request, env.SCF_ALLOWED_ORIGINS)) return fail(403, "forbidden-origin");
+  if (!originAllowed(request, setting(env, "ALLOWED_ORIGINS"))) return fail(403, "forbidden-origin");
   const text = await request.text().catch(() => null);
   if (text === null || text.length > MAX_BODY_BYTES) return fail(400, "bad-request");
   let body: { query?: unknown; intent?: unknown };

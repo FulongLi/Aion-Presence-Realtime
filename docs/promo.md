@@ -1,4 +1,4 @@
-# The SCF Presence film
+# The Aion Presence film
 
 A ~61-second promotional film, performed live by the product itself: the same particle runtime,
 PresenceEngine, native tool calls, ToolExecutor, VisualActionController, Visual Resolver and local brand
@@ -16,7 +16,7 @@ nothing → particles → a body → it sees (Nikola Tesla) → information beco
 | `npm run promo` | Starts the dev server and prints the film's URL, <http://localhost:3000/promo> |
 | `npm run promo:prepare` | Records the dialogue once with OpenAI text-to-speech into `public/promo/audio/` (needs `OPENAI_API_KEY`) |
 | `npm run promo:prepare -- --check` | Verifies the recorded lines match the script and fit the timeline (no API calls) |
-| `npm run promo:render` | Builds the app, renders the film in headless Chrome and encodes `output/scf-presence-promo-1080p.mp4` |
+| `npm run promo:render` | Builds the app, renders the film in headless Chrome and encodes `output/aion-presence-promo-1080p.mp4` |
 | `npm run promo:check` | Both checks: dialogue assets, then review stills and a 2-second encode verified by decoding |
 
 **Final render, from a clean checkout:**
@@ -24,7 +24,7 @@ nothing → particles → a body → it sees (Nikola Tesla) → information beco
 ```bash
 npm install
 npm run promo:prepare      # once; OPENAI_API_KEY in .env.local or the environment
-npm run promo:render       # → output/scf-presence-promo-1080p.mp4
+npm run promo:render       # → output/aion-presence-promo-1080p.mp4
 ```
 
 Requirements: Node 22, Google Chrome (the capture uses its real WebGPU; pass `--chrome <path>` for another
@@ -39,7 +39,7 @@ version), `--stills [auto|t1,t2,…]` (PNG stills of key moments for review, int
 
 ## Watching it
 
-Open `/promo`. Before playback there is only the black frame, *SCF Presence* and **Play film**; the film
+Open `/promo`. Before playback there is only the black frame, *Aion Presence* and **Play film**; the film
 prepares first ("Preparing Presence…") and cannot start until every scene's visual is resolved.
 
 - **Space** play / pause · **Esc** pause and show controls · **F** fullscreen · **M** mute · **C** subtitles

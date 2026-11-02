@@ -310,7 +310,7 @@ export class FilmPlayer {
 
   private fail(error: PromoError) {
     if (this.state === "failed") return;
-    if (process.env.NODE_ENV === "development") console.error("[SCF promo]", error.code, error.detail);
+    if (process.env.NODE_ENV === "development") console.error("[Aion promo]", error.code, error.detail);
     cancelAnimationFrame(this.frame);
     this.problem = error;
     this.clock?.pause();

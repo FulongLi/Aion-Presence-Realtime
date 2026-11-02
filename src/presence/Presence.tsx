@@ -8,7 +8,9 @@ import { PresenceController } from "./controller";
 import { StageNotice } from "./StageNotice";
 import { stringsFor } from "./strings";
 
-const DEBUG_BUILD = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_SCF_DEBUG === "1";
+const DEBUG_BUILD = process.env.NODE_ENV === "development" || process.env.NEXT_PUBLIC_AION_DEBUG === "1"
+  // The pre-rename name still works.
+  || process.env.NEXT_PUBLIC_SCF_DEBUG === "1";
 const subscribeLanguage = (callback: () => void) => {
   window.addEventListener("languagechange", callback);
   return () => window.removeEventListener("languagechange", callback);
@@ -20,7 +22,7 @@ const subscribeLanguage = (callback: () => void) => {
  * one. Only first-run microphone setup and connection problems ever put words of this page's own on the stage.
  */
 export default function Presence({ configuredBackend = null }: {
-  /** SCF_VOICE_BACKEND from the server; `?voice=realtime|live` overrides it for A/B testing. */
+  /** AION_VOICE_BACKEND from the server; `?voice=realtime|live` overrides it for A/B testing. */
   configuredBackend?: VoiceBackend | null;
 }) {
   const language = useSyncExternalStore(subscribeLanguage, () => navigator.language, () => "en");

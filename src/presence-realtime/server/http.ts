@@ -1,5 +1,6 @@
 import { randomBytes } from "node:crypto";
 import { originAllowed } from "../../server/realtimeToken";
+import { setting } from "../../server/settings";
 import { VIEWER_ID } from "./sessions";
 
 /**
@@ -8,7 +9,7 @@ import { VIEWER_ID } from "./sessions";
  * - The viewer is an HttpOnly, SameSite=Strict cookie scoped to /api/presence: another site's page cannot send it, and
  *   page scripts cannot read it. It selects this browser's Aion; it is not authentication (see README › API key handling).
  * - Every request must be same-origin by Fetch Metadata where the browser sends it; state-changing requests also need the
- *   app's own Origin (or SCF_ALLOWED_ORIGINS), as the token route does.
+ *   app's own Origin (or AION_ALLOWED_ORIGINS, formerly SCF_ALLOWED_ORIGINS), as the token route does.
  * - Bodies are bounded before parsing.
  */
 export const VIEWER_COOKIE = "aion_viewer";
@@ -37,7 +38,7 @@ export function sameSite(request: Request): boolean {
 }
 
 export function writeAllowed(request: Request, env: NodeJS.ProcessEnv = process.env): boolean {
-  return sameSite(request) && originAllowed(request, env.SCF_ALLOWED_ORIGINS);
+  return sameSite(request) && originAllowed(request, setting(env, "ALLOWED_ORIGINS"));
 }
 
 export const problem = (status: number, error: string) => Response.json({ error }, { status, headers: { "Cache-Control": "no-store" } });

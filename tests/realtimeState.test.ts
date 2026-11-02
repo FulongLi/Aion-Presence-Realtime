@@ -6,7 +6,7 @@ import { AWAIT_RESPONSE_MS, initialState, presenceHints, reduce, sessionPhase } 
 const server = (value: unknown) => parseServerEvent(JSON.stringify(value));
 const connected = () => reduce(initialState(), { type: "connection", state: "connected" }, 0);
 
-test("GA server events are normalized into the few things SCF needs", () => {
+test("GA server events are normalized into the few things Aion needs", () => {
   assert.deepEqual(server({ type: "session.created", session: { id: "sess_1", model: "gpt-realtime-2.1" } }),
     { type: "session.ready", sessionId: "sess_1", model: "gpt-realtime-2.1" });
   assert.deepEqual(server({ type: "input_audio_buffer.speech_started", audio_start_ms: 10, item_id: "item_1" }), { type: "user.speech_started", itemId: "item_1" });

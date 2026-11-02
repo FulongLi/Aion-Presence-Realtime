@@ -90,7 +90,7 @@ Expected:
 | Block the microphone in site settings and reload | A one-line notice explains how to allow it. |
 | Debug → **disconnect** | The body goes idle, and only one session is ever created (check the Network tab for `/v1/realtime/calls`). |
 
-## 6. GPT-Live (`/?voice=live&debug=1`, or `SCF_VOICE_BACKEND=live`)
+## 6. GPT-Live (`/?voice=live&debug=1`, or `AION_VOICE_BACKEND=live`)
 
 Same key, no other setup. Debug → **voice backend** should show `backend live`, `live model gpt-live-1 · backend model gpt-5.6-terra`, a `live_…` session id after `session.started`, and the connect time.
 

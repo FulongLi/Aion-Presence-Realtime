@@ -9,10 +9,10 @@ export type * from "./types";
 /**
  * Every visual form pack, in the order their forms are listed to the model. A new pack (math, physics,
  * chemistry, biology, music, engineering, mythology, …) is one more entry here: its categories, its forms
- * and their renderers. Nothing else in SCF changes: show_form, validation, the resolver and the body all
+ * and their renderers. Nothing else in Aion changes: show_form, validation, the resolver and the body all
  * read the registry.
  */
 export const VISUAL_FORM_PACKS: readonly VisualFormPack[] = [taoPack, celestialPack];
 
-/** The registry SCF uses. Pure and side-effect free: forms are only drawn when first shown. */
+/** The registry Aion uses. Pure and side-effect free: forms are only drawn when first shown. */
 export const visualForms = new VisualFormRegistry(VISUAL_FORM_PACKS);

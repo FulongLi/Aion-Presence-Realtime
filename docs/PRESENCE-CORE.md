@@ -56,7 +56,7 @@ A new user turn shortens the previous topic's temporary presentation, as the Plu
 | Route | Checks |
 | --- | --- |
 | all `/api/presence/*` | Node.js runtime; Fetch Metadata (`Sec-Fetch-Site` must be same-origin when present); viewer cookie `HttpOnly; SameSite=Strict; Path=/api/presence` selects the browser's own host. |
-| `POST tool`, `card`, `surface` | plus the app's own `Origin` (or `SCF_ALLOWED_ORIGINS`), as the token route; bodies bounded (256 KB / 96 KB / 64 KB) before parsing; strict schemas. |
+| `POST tool`, `card`, `surface` | plus the app's own `Origin` (or `AION_ALLOWED_ORIGINS`), as the token route; bodies bounded (256 KB / 96 KB / 64 KB) before parsing; strict schemas. |
 | `GET events` | creates the viewer's host (at most 8 in memory; idle ones closed after 30 min, their FreeCAD worker stopped). |
 | `GET media/:id` | id pattern, the viewer's own media only, bytes served with the type sniffed from content, `CSP: sandbox`. |
 | `GET tile/z/x/y` | only tiles around the open route; cached under OSM's policy. |

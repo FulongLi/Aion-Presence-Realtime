@@ -17,7 +17,7 @@ export interface PromoRenderApi {
   /** The body's current state and the cues performed so far. */
   inspect(): ReturnType<FilmPlayer["inspect"]>;
 }
-declare global { interface Window { __scfPromo?: PromoRenderApi } }
+declare global { interface Window { __aionPromo?: PromoRenderApi } }
 
 const readParams = () => {
   const params = new URLSearchParams(location.search);
@@ -30,7 +30,7 @@ const readParams = () => {
 };
 
 /**
- * /promo: the SCF Presence film, performed live by the real particle body. Before playback: the black
+ * /promo: the Aion Presence film, performed live by the real particle body. Before playback: the black
  * frame and one Play control. During playback: nothing but the film. After: Replay.
  */
 export default function PromoExperience() {
@@ -79,7 +79,7 @@ export default function PromoExperience() {
         return created.report;
       });
       ready.catch(() => {}); // a discarded mount's promise is never awaited
-      window.__scfPromo = {
+      window.__aionPromo = {
         ready,
         renderFrame: (index, present) => created.renderFrame(index, present),
         renderAudio: () => created.renderAudio(),
@@ -90,7 +90,7 @@ export default function PromoExperience() {
     return () => {
       disposed = true;
       created.dispose();
-      if (window.__scfPromo?.ready) delete window.__scfPromo;
+      if (window.__aionPromo?.ready) delete window.__aionPromo;
     };
   }, [attempt]);
 
@@ -144,9 +144,9 @@ export default function PromoExperience() {
 
   return (
     <div className={styles.stage} ref={stage} data-cursor={cursorHidden ? "hidden" : "visible"}>
-      <h1 className="sr-only">SCF Presence — the film</h1>
+      <h1 className="sr-only">Aion Presence — the film</h1>
       <div className={styles.frame}>
-        <div className={styles.canvas} ref={canvas} role="img" aria-label="The SCF particle body" />
+        <div className={styles.canvas} ref={canvas} role="img" aria-label="The Aion particle body" />
         <FilmWords register={register} />
         {!render && player && <Controls
           state={state} problem={player.problem} missing={player.report?.missingDialogue ?? []}

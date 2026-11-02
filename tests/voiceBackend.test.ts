@@ -8,7 +8,7 @@ import { PresenceController } from "../src/presence/controller";
 import { RealtimeClient, type RealtimeEnvironment } from "../src/realtime/client";
 import { DEFAULT_VOICE_BACKEND, parseVoiceBackend, resolveVoiceBackend } from "../src/voice/backend";
 
-test("backend selection: ?voice= → SCF_VOICE_BACKEND → realtime; unknown values are ignored", () => {
+test("backend selection: ?voice= → AION_VOICE_BACKEND → realtime; unknown values are ignored", () => {
   assert.equal(DEFAULT_VOICE_BACKEND, "realtime");
   assert.equal(resolveVoiceBackend("", undefined), "realtime");
   assert.equal(resolveVoiceBackend("", "live"), "live");

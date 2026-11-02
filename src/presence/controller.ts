@@ -120,7 +120,7 @@ export class PresenceController {
   ) {
     this.resolver = createBrowserResolver();
     this.visual = new VisualActionController(this.resolver.resolve, (error, action) => {
-      if (process.env.NODE_ENV === "development") console.warn("[SCF] Visual Action could not be resolved", action, error);
+      if (process.env.NODE_ENV === "development") console.warn("[Aion] Visual Action could not be resolved", action, error);
     });
     this.aion = new Aion({ signal: () => this.engine.signal, presenting: () => this.visual.presenting });
     this.executor = new ToolExecutor(this.visual, undefined, { setBody: form => this.setBody(form) });
@@ -346,7 +346,7 @@ export class PresenceController {
     if (event.type === "user.speech_started") this.hooks.userTurn?.();
     // Barge-in: OpenAI cut the unplayed audio; speaking ends now and listening takes over.
     if (event.type === "audio.cleared") this.engine.interrupt(performance.now() / 1000);
-    if (event.type === "error" && process.env.NODE_ENV === "development") console.warn("[SCF] Realtime error", event);
+    if (event.type === "error" && process.env.NODE_ENV === "development") console.warn("[Aion] Realtime error", event);
   }
 
   /**
@@ -356,7 +356,7 @@ export class PresenceController {
   private liveEvent(event: LiveEvent) {
     if (event.type === "transcript.user" || event.type === "transcript.assistant" || event.type === "delegation.created") this.lastActivity = performance.now();
     if (event.type === "delegation.created") this.hooks.userTurn?.();
-    if (event.type === "error" && process.env.NODE_ENV === "development") console.warn("[SCF] GPT-Live error", event);
+    if (event.type === "error" && process.env.NODE_ENV === "development") console.warn("[Aion] GPT-Live error", event);
   }
 
   private speakingStarted(now: number) {

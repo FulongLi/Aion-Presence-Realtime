@@ -39,7 +39,7 @@ test("creates a GPT-Live WebRTC session with the same OPENAI_API_KEY; only the a
   assert.equal(calls[0].init.method, "POST");
   const headers = calls[0].init.headers as Record<string, string>;
   assert.equal(headers.Authorization, `Bearer ${KEY}`);
-  assert.match(headers["OpenAI-Safety-Identifier"], /^scf-[0-9a-f]{40}$/);
+  assert.match(headers["OpenAI-Safety-Identifier"], /^aion-[0-9a-f]{40}$/);
   const payload = JSON.parse(String(calls[0].init.body));
   assert.deepEqual(payload.transport, { type: "webrtc", sdp: OFFER }, "the browser's offer is forwarded unchanged");
   assert.equal(payload.session.model, "gpt-live-1");

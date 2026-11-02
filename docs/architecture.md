@@ -5,14 +5,14 @@
 > `src/particle`, `src/visual-*`), which the promo film still uses, and the voice layer (`src/realtime`, `src/live`,
 > `src/voice`, `src/audio`), which is unchanged.
 
-One test decides every design choice here: **does this make SCF feel like one AI with one living body?**
+One test decides every design choice here: **does this make Aion feel like one AI with one living body?**
 
 ## Code map
 
 ```text
 src/
   app/
-    page.tsx, layout.tsx, globals.css   page reads SCF_VOICE_BACKEND per request
+    page.tsx, layout.tsx, globals.css   page reads AION_VOICE_BACKEND per request
     api/realtime/token/route.ts   server-only: POST → ephemeral client secret (Realtime)
     api/live/session/route.ts     server-only: POST SDP offer → GPT-Live session → SDP answer
     api/visual/image/route.ts     optional, server-only: keyed web image search (off without a key)
@@ -20,7 +20,7 @@ src/
   server/liveSession.ts           pure GPT-Live session creation (same key, origin check, safety id)
   server/imageSearch.ts           pure keyed-image-search logic (Brave; fixed thumbnail host)
   voice/                          what both backends share
-    backend.ts                    VoiceBackend = "realtime" | "live"; ?voice= → SCF_VOICE_BACKEND → realtime
+    backend.ts                    VoiceBackend = "realtime" | "live"; ?voice= → AION_VOICE_BACKEND → realtime
     client.ts                     VoiceClient: the small interface PresenceController drives
     webrtc.ts                     PeerLike / ChannelLike (mockable WebRTC shapes)
     visualGuidance.ts             visual-body and visual-tool rules shared by both prompts
@@ -37,7 +37,7 @@ src/
     state.ts                      Live state reducer + full-duplex Presence hints + phase
   realtime/
     session.ts                    GA session config (model, voice, VAD, tools, instructions)
-    instructions.ts               the agent prompt ("SCF is your visual body")
+    instructions.ts               the agent prompt ("Aion is your visual body")
     client.ts                     RealtimeClient: WebRTC peer + data channel lifecycle, reconnect
     transport.ts                  browser environment: token fetch, SDP exchange with /v1/realtime/calls
     events.ts                     normalizes GA server events; client event types
@@ -75,7 +75,7 @@ src/
     transforms/raster.ts          browser decoding (createImageBitmap + canvas)
     transforms/svg.ts             local SVG only: safety check, sizing, <img> → canvas, logo normalization
     transforms/heightfield.ts     terrarium decode, polygon mask, smoothing, normalization (pure)
-  visual-forms/                   SCF's own visual language: procedural forms (pure, no DOM, no network)
+  visual-forms/                   Aion's own visual language: procedural forms (pure, no DOM, no network)
     index.ts                      VISUAL_FORM_PACKS and the shared registry (`visualForms`)
     registry.ts                   VisualFormRegistry: ids, categories, aliases, terms, variants, lookup, render cache
     types.ts                      VisualFormEntry, FormCategory, VisualFormPack, FormRendering
@@ -157,7 +157,7 @@ The Realtime path is unchanged apart from moving the backend-agnostic tool code 
 ### GPT-Live session
 
 ```text
-browser                                     SCF server                          OpenAI
+browser                                     Aion server                         OpenAI
 RTCPeerConnection + mic track
 createDataChannel("oai-events")   (before the offer)
 createOffer → setLocalDescription → wait for ICE gathering (≤ 4 s; the offer is not trickled)
@@ -201,7 +201,7 @@ disconnected → connecting → connected ⇄ { listening → thinking → speak
                                  └ ended (idle timeout; tap to resume)
 ```
 
-Only what SCF needs is tracked: `userSpeaking`, `awaitingSince`, `responseActive`, `audioActive`, `toolsActive`, plus counters (responses, interruptions, token usage). OpenAI keeps the conversation itself. SCF keeps no copy of it.
+Only what Aion needs is tracked: `userSpeaking`, `awaitingSince`, `responseActive`, `audioActive`, `toolsActive`, plus counters (responses, interruptions, token usage). OpenAI keeps the conversation itself. Aion keeps no copy of it.
 
 | Realtime server event (GA) | Effect |
 | --- | --- |
@@ -215,7 +215,7 @@ Only what SCF needs is tracked: `userSpeaking`, `awaitingSince`, `responseActive
 
 ## Presence state mapping
 
-Two VADs have separate jobs. **OpenAI's VAD controls conversational turns. SCF's local VAD controls the body.**
+Two VADs have separate jobs. **OpenAI's VAD controls conversational turns. Aion's local VAD controls the body.**
 
 | Body state | Driven by |
 | --- | --- |
@@ -261,7 +261,7 @@ conversation.item.create { type: "function_call_output", call_id, output: '{"ok"
 ```
 
 - **One schema.** Tools resolve into the `VisualAction` union and go through the validator and controller. There is no second visual schema.
-- **Tools.** `show_image { query, intent? }` and `show_terrain { region, style? }` are open: any query or place goes to the Visual Resolver. `show_form { form, variant? }` draws a concept from SCF's own visual language (a registered visual form: Taoist symbols, constellations, zodiac and planetary glyphs); `form` is an id or a name the registry resolves, so the action always carries a canonical id (see [Visual Form Packs](#visual-form-packs)). `show_emoji { emoji }` shows any single Unicode emoji as a brief expressive reaction (validated as exactly one grapheme cluster with `Intl.Segmenter` plus an allowlist pattern of emoji sequences: pictographs, skin tones, VS-16, ZWJ, flags, keycaps, tag flags). `show_clock`, `show_portrait`, `show_number`, `show_text`, `show_symbol` and `return_to_sphere` remain as convenience tools. `intent` and `style` are hints: an unknown value falls back to the default rather than failing the call.
+- **Tools.** `show_image { query, intent? }` and `show_terrain { region, style? }` are open: any query or place goes to the Visual Resolver. `show_form { form, variant? }` draws a concept from Aion's own visual language (a registered visual form: Taoist symbols, constellations, zodiac and planetary glyphs); `form` is an id or a name the registry resolves, so the action always carries a canonical id (see [Visual Form Packs](#visual-form-packs)). `show_emoji { emoji }` shows any single Unicode emoji as a brief expressive reaction (validated as exactly one grapheme cluster with `Intl.Segmenter` plus an allowlist pattern of emoji sequences: pictographs, skin tones, VS-16, ZWJ, flags, keycaps, tag flags). `show_clock`, `show_portrait`, `show_number`, `show_text`, `show_symbol` and `return_to_sphere` remain as convenience tools. `intent` and `style` are hints: an unknown value falls back to the default rather than failing the call.
 - **Concurrency.** An image or terrain forms while the model keeps talking. `morphSpeechBlend()` fades destructive speaking forces early in the morph, and a small audio-reactive shimmer stays, so portraits, clocks and text remain readable during speech.
 - **Failure** (invalid arguments, unknown tool, `image-not-found`, `image-unavailable`, `portrait-not-found`, `portrait-unavailable`, `region-not-found`, `terrain-unavailable`, `form-not-found`, `form-unavailable`, superseded): the body stays or returns to the sphere, the model gets `{ ok: false, status }`, and it continues without the visual.
 - **Silence about tools.** The instructions tell the model the visual channel is auxiliary and not to be narrated. A response that already spoke gets no follow-up, so the model has no reason to comment on the tool result.
@@ -288,7 +288,7 @@ Calls are deduplicated by `call_id`; a failed or incomplete response, or a closi
 
 ## Visual Resolver: open 2D and 2.5D visuals
 
-SCF currently supports **open 2D and 2.5D visual expression**. True 3D object models are intentionally deferred.
+Aion currently supports **open 2D and 2.5D visual expression**. True 3D object models are intentionally deferred.
 
 ### Before and after
 
@@ -345,7 +345,7 @@ interface ImageProvider { name: string; search(query, intent, signal): Promise<I
 | `wikipedia` | lead image of the matching article (exact title with redirects, then a search whose hit must share most of the query's words) | none | freely licensed images only (`pilicense=free`); language picked from the script (en/zh/ja/ko) |
 | `commons` | Wikimedia Commons file search (`filetype:bitmap`; maps may be SVG drawings, used through their PNG thumbnails) | none | free licences |
 | `openverse` | [Openverse](https://openverse.org) (Flickr, museums, Wikimedia and more), images through Openverse's own thumbnail endpoint | none | open licences; anonymous use is rate-limited |
-| `web` | Brave Search images through SCF's server route | `BRAVE_SEARCH_API_KEY`, server only | optional; skipped when not configured |
+| `web` | Brave Search images through Aion's server route | `BRAVE_SEARCH_API_KEY`, server only | optional; skipped when not configured |
 
 The order depends on the intent ([`providers/images.ts`](../src/visual-resolver/providers/images.ts)):
 
@@ -554,7 +554,7 @@ One small, generic addition: `MorphTarget.motion.spin`. The runtime accumulates 
 
 The client sends no cancel events itself. With WebRTC, the server's own interruption handling is authoritative and it truncates the conversation correctly.
 
-**GPT-Live.** GPT-Live listens while it speaks and decides itself whether to yield (its prompt says: stop speaking when the user interrupts). SCF sends nothing and forces no Realtime-style turn-taking: user speech during audible assistant audio keeps the body speaking; the assistant's audio stopping under the user's voice is the interruption the body reacts to (see [Presence state mapping](#presence-state-mapping)). Backend work continues through an interruption, as the GPT-Live docs describe.
+**GPT-Live.** GPT-Live listens while it speaks and decides itself whether to yield (its prompt says: stop speaking when the user interrupts). Aion sends nothing and forces no Realtime-style turn-taking: user speech during audible assistant audio keeps the body speaking; the assistant's audio stopping under the user's voice is the interruption the body reacts to (see [Presence state mapping](#presence-state-mapping)). Backend work continues through an interruption, as the GPT-Live docs describe.
 
 ## Connection, reconnection and errors
 

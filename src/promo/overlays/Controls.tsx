@@ -6,7 +6,7 @@ import type { LineId } from "../script";
 import styles from "../styles/promo.module.css";
 
 const PROBLEMS: Record<string, string> = {
-  "webgpu-unavailable": "This film is rendered live on the SCF particle body, which needs a browser with WebGPU (current Chrome, Edge or Safari).",
+  "webgpu-unavailable": "This film is rendered live on the Aion particle body, which needs a browser with WebGPU (current Chrome, Edge or Safari).",
   "webgpu-failed": "The graphics device could not be started.",
   "device-lost": "The graphics device was lost.",
   "target-unavailable": "A scene's visual could not be prepared. Check the connection and try again.",
@@ -41,7 +41,7 @@ export function Controls({ state, problem, missing, reducedMotion, muted, fullsc
   if (state === "preparing") {
     return <div className={styles.controls}>
       <div className={styles.panel} role="status">
-        <p className={styles.brand}>SCF Presence</p>
+        <p className={styles.brand}>Aion Presence</p>
         <p className={styles.status}>Preparing Presence…</p>
       </div>
     </div>;
@@ -50,7 +50,7 @@ export function Controls({ state, problem, missing, reducedMotion, muted, fullsc
     const detail = process.env.NODE_ENV === "development" && problem?.detail ? ` (${problem.detail})` : "";
     return <div className={styles.controls}>
       <div className={styles.panel} role="alert">
-        <p className={styles.brand}>SCF Presence</p>
+        <p className={styles.brand}>Aion Presence</p>
         <p className={`${styles.note} ${styles.problem}`}>{(PROBLEMS[problem?.code ?? ""] ?? "The film could not be prepared.") + detail}</p>
         <button type="button" className={styles.text} onClick={onRetry}>Try again</button>
       </div>
@@ -76,7 +76,7 @@ export function Controls({ state, problem, missing, reducedMotion, muted, fullsc
   }
   return <div className={styles.controls}>
     <div className={styles.panel}>
-      <p className={styles.brand}>SCF Presence</p>
+      <p className={styles.brand}>Aion Presence</p>
       <button type="button" className={styles.play} onClick={onPlay}><Play />Play film</button>
       {reducedMotion && <p className={styles.note}>Your system asks for reduced motion. This film is made of slow, continuous particle motion; it plays as designed.</p>}
       {missing.length > 0 && <p className={styles.note}>

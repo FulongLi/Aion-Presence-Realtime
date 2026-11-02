@@ -107,7 +107,7 @@ test("live events: only current GPT-Live names are recognized; Realtime names ar
   assert.deepEqual(parseLiveEvent("{not json"), { type: "ignored", name: "malformed" });
 });
 
-test("connect: complete (non-trickle) offer to SCF's server, answer applied, connected only on session.started", async () => {
+test("connect: complete (non-trickle) offer to Aion's server, answer applied, connected only on session.started", async () => {
   const h = harness();
   h.client.connect(h.microphone);
   assert.equal(h.client.connection, "connecting");
@@ -198,7 +198,7 @@ test("delegation: results for every call before continuing; duplicates run once;
   await settle();
   assert.equal(closing.stats.continuations, 0, "a closing session is not continued");
   loop.handle({ type: "delegation.created", delegationId: "client-owned", target: "client" });
-  assert.equal(loop.stats.delegations, 1, "client delegations are not SCF's (Responses delegation is configured)");
+  assert.equal(loop.stats.delegations, 1, "client delegations are not Aion's (Responses delegation is configured)");
   assert.equal(finished, 0, "a continued delegation stays active until its continuation finishes");
   assert.equal(loop.active, 1);
 });

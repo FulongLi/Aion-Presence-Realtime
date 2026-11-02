@@ -44,7 +44,7 @@ Details: [docs/PRESENCE-CORE.md](docs/PRESENCE-CORE.md) · parity matrix: [docs/
 | **GPT-Live** (`live`) | `gpt-live-1` listens and speaks full duplex and delegates to a Responses model (`gpt-5.6-terra`) that reasons and calls the same tools. The browser gets no credential at all. |
 
 Both receive the same canonical tool registry (the Realtime model a shortened profile, the GPT-Live backend full
-descriptions). Choose with `SCF_VOICE_BACKEND`, or `?voice=realtime|live` per page load. Details of the sessions,
+descriptions). Choose with `AION_VOICE_BACKEND`, or `?voice=realtime|live` per page load. Details of the sessions,
 audio, barge-in and key handling: [docs/realtime-voice.md](docs/realtime-voice.md).
 
 ## Install and run

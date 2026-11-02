@@ -26,7 +26,7 @@ export interface ToolLoopHost {
 interface ResponseEntry { calls: number; pending: number; finished?: { status: ResponseStatus; spoke: boolean }; settled: boolean }
 
 /**
- * The GA Realtime function-calling lifecycle for SCF's native visual tools:
+ * The GA Realtime function-calling lifecycle for Aion's native visual tools:
  *
  *   response.function_call_arguments.delta  → arguments assembled per call_id
  *   response.function_call_arguments.done   → validate + execute locally (voice keeps playing)

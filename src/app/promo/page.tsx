@@ -2,8 +2,8 @@ import type { Metadata, Viewport } from "next";
 import PromoExperience from "@/promo/PromoExperience";
 
 export const metadata: Metadata = {
-  title: "SCF Presence — Film",
-  description: "What if AI could have a presence? A film performed live by the SCF particle body.",
+  title: "Aion Presence — Film",
+  description: "What if AI could have a presence? A film performed live by the Aion particle body.",
 };
 export const viewport: Viewport = { themeColor: "#000000", colorScheme: "dark" };
 
