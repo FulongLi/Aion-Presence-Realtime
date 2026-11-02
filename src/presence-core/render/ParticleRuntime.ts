@@ -1,0 +1,313 @@
+import { ACESFilmicToneMapping, PerspectiveCamera, Scene, Vector3, type Vector4 } from "three";
+import { WebGPURenderer } from "three/webgpu";
+import { particleDefaults, type ParticleConfig } from "./particleDefaults";
+import type { BodySource } from "../core/aion";
+import type { PresenceSignalSource } from "../core/signal";
+import type { MorphTarget } from "../visual/types";
+import { morphSpeechBlend } from "./morphBlend";
+import { AdaptiveQuality, qualityRange, qualityTiers } from "./quality";
+import { createParticleSystem } from "./ParticleSystem";
+import { PointerPusher } from "./interaction/pointer";
+import type { OrbitView } from "./interaction/orbit";
+import { syncUniforms } from "./physics/uniforms";
+import { createPostFX } from "./rendering/postfx";
+import { SpeechMotion } from "./speechMotion";
+import { PaletteEase } from "./palette";
+import type { ParticlePalette } from "../core/colors";
+import { ringParams } from "./ring";
+import { NO_WRITING, type WritingUniforms } from "./writing";
+
+/** What the runtime reads each frame. It knows nothing about the host, MCP, hooks or tools. */
+export interface MorphSource { sample(dt: number): number; readonly revision: number; readonly target: MorphTarget | null }
+/**
+ * `body` is Aion's persistent body (sphere or figure, see core/body.ts), the rest every temporary visual
+ * forms from and returns to.
+ */
+export interface RuntimeInputs {
+  presence: PresenceSignalSource; morph: MorphSource; body: BodySource; framing?: FramingSource; orbit?: OrbitSource; audio?: AudioVisualSource;
+  /** v0.4.3: how far a formed writing target is written (render/writing.ts); absent or NO_WRITING: shown as sampled. */
+  writing?: WritingSource;
+}
+
+/** The writing state each frame, already in world units (the tip) (see surface/writing.ts). */
+export interface WritingSource { sample(dt: number): WritingUniforms }
+
+/**
+ * Sound for the body (v0.4.2), already chosen and eased by the surface (see surface/audioVisual.ts): the active
+ * source's features, the ring layer's weight and layout (0 spectrum … 1 hybrid), the sphere audio field's weight, and
+ * the intensity's gain. Every weight 0: the body exactly as without sound.
+ */
+export interface AudioVisualFrame {
+  ring: number; layout: number; sphere: number; gain: number;
+  level: number; bass: number; mid: number; treble: number; beat: number;
+  /** RING_BANDS values, 0…1. */
+  bands: Float32Array;
+}
+export interface AudioVisualSource { sample(dt: number): AudioVisualFrame }
+
+/** How a formed 3D object is viewed (see interaction/orbit.ts). */
+export interface OrbitSource { sample(dt: number): OrbitView }
+
+/**
+ * Where the body sits in the frame: `x` shifts it sideways and `y` upward (fractions of the view), `scale`
+ * sizes it. The surface moves the body aside when words stand beside it; the renderer frames it, so the
+ * background never moves.
+ */
+export interface Framing { x: number; y: number; scale: number }
+export interface FramingSource { sample(dt: number): Framing }
+
+export interface RuntimeOptions {
+  /** A fixed quality tier for the whole session: no adaptive changes. */
+  tier?: number;
+  /** Pointer interaction with the body. Default true. */
+  interactive?: boolean;
+  /** Calm the body under prefers-reduced-motion. Default true. */
+  reducedMotion?: boolean;
+}
+
+export interface QualityReport { tier: number; ceiling: number; count: number; effects: boolean; frameMs: number; frames: number }
+
+export interface RuntimeHandle {
+  readonly backend: "webgpu" | "canvas";
+  readonly config: ParticleConfig;
+  /** Development tuning: copy `config` into uniforms every frame. */
+  tuning: boolean;
+  quality(): QualityReport;
+  setTier(tier: number): void;
+  /** Where a point on the screen (client pixels) lies on the body's plane (z = 0), in world units; null if nowhere. */
+  toWorld(clientX: number, clientY: number): [number, number] | null;
+  /**
+   * Where a point of the formed visual (target space, world units) is on the screen right now (client pixels), as
+   * this renderer draws it — framing, perspective and the formed visual's own slow sway included. Null off screen.
+   */
+  project(point: [number, number, number]): [number, number] | null;
+  /** Aion's base colour: the palette is eased to over about a second; `immediate` jumps (a page's first frame). */
+  setPalette(palette: ParticlePalette, immediate?: boolean): void;
+  /**
+   * v0.4.5: caps the body's frame rate (null: the display's own) while the user works in a large interactive card, so
+   * the two renderers do not compete. Physics keeps its fixed step; adaptive quality ignores the capped frames.
+   */
+  setFrameCap?(fps: number | null): void;
+  dispose(): void;
+}
+
+const STEP = 1 / 120;
+
+/**
+ * The WebGPU particle body from SCF Presence: compute-shader physics at a fixed 120 Hz step, instanced
+ * microdisc particles and bloom, with adaptive quality. Throws "webgpu-unavailable" / "webgpu-failed" when
+ * the browser cannot run it; the caller then falls back to the canvas renderer (see render/index.ts).
+ */
+export async function createParticleRuntime(
+  container: HTMLElement, inputs: RuntimeInputs, lifetime: AbortSignal, onError: (message: string) => void,
+  options: RuntimeOptions = {},
+): Promise<RuntimeHandle | undefined> {
+  if (!navigator.gpu) throw new Error("webgpu-unavailable");
+  const config = structuredClone(particleDefaults);
+  const renderer = new WebGPURenderer({ antialias: false, alpha: true, powerPreference: "high-performance" });
+  // Only the WebGPU backend is used (the canvas renderer is Aion's fallback): no WebGL2 backend is tried, so a browser
+  // without WebGPU or WebGL falls back cleanly instead of failing inside three.js (v0.4.5).
+  (renderer as unknown as { _getFallback: null })._getFallback = null;
+  // A renderer that never initialized holds nothing to release (disposing it would start, and fail, its initialization again).
+  try { await renderer.init(); } catch { throw new Error("webgpu-failed"); }
+  if (lifetime.aborted) { renderer.dispose(); return; }
+  if (!("isWebGPUBackend" in renderer.backend)) { renderer.dispose(); throw new Error("webgpu-unavailable"); }
+  renderer.setClearColor(0x090e16, 0);
+  renderer.toneMapping = ACESFilmicToneMapping;
+  renderer.toneMappingExposure = 1.12;
+  const scene = new Scene();
+  const camera = new PerspectiveCamera(38, 1, 0.1, 40);
+  const coarse = matchMedia("(pointer: coarse)").matches;
+  const memory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+  const fixed = options.tier === undefined ? null : Math.max(0, Math.min(qualityTiers.length - 1, Math.round(options.tier)));
+  const range = fixed === null ? qualityRange(coarse, navigator.hardwareConcurrency || 4, memory) : { initial: fixed, max: fixed };
+  const quality = new AdaptiveQuality(range.initial, range.max);
+  // Buffers are sized for the session ceiling so the tier can rise without reallocation.
+  const system = createParticleSystem(qualityTiers[range.max].count, config);
+  system.setCount(quality.settings().count);
+  scene.add(system.mesh);
+  const u = system.uniforms;
+  const speechMotion = new SpeechMotion();
+  const palette = new PaletteEase();
+  const fx = createPostFX(renderer, scene, camera, config);
+  const pointer = options.interactive === false ? null : new PointerPusher(container, camera);
+  const reducedMotion = matchMedia("(prefers-reduced-motion: reduce)");
+  const calm = () => options.reducedMotion !== false && reducedMotion.matches;
+  renderer.domElement.setAttribute("aria-hidden", "true");
+  container.append(renderer.domElement);
+  let stopped = false, frame = 0, revision = -1, accumulator = 0, frameMs = 16.7, spinAngle = 0, frames = 0;
+  let framed = { x: 0, y: 0, scale: 1 }, viewWidth = 1, viewHeight = 1;
+  const frameView = (framing: Framing) => {
+    if (Math.abs(framing.x - framed.x) < 1e-4 && Math.abs(framing.y - framed.y) < 1e-4 && Math.abs(framing.scale - framed.scale) < 1e-4) return;
+    framed = { ...framing };
+    camera.setViewOffset(viewWidth, viewHeight, -framed.x * viewWidth, framed.y * viewHeight, viewWidth, viewHeight);
+    camera.zoom = framed.scale;
+    camera.updateProjectionMatrix();
+  };
+  let last = performance.now();
+  const resize = () => {
+    const width = Math.max(1, container.clientWidth);
+    const height = Math.max(1, container.clientHeight);
+    camera.aspect = width / height;
+    const extent = (config.geometry.radius + config.spring.maxOffset) * 1.07;
+    camera.position.z = Math.max(7.4, extent / (Math.tan(camera.fov * Math.PI / 360) * Math.min(1, camera.aspect)));
+    viewWidth = width; viewHeight = height;
+    camera.setViewOffset(width, height, -framed.x * width, framed.y * height, width, height);
+    camera.updateProjectionMatrix();
+    renderer.setPixelRatio(Math.min(devicePixelRatio, quality.settings().pixelRatio));
+    renderer.setSize(width, height);
+  };
+  const applyQuality = () => { system.setCount(quality.settings().count); resize(); };
+  const observer = new ResizeObserver(resize);
+  observer.observe(container);
+  resize();
+  const cleanup = () => {
+    if (stopped) return;
+    stopped = true;
+    cancelAnimationFrame(frame);
+    observer.disconnect();
+    pointer?.dispose();
+    fx.post.dispose(); fx.scenePass.dispose(); fx.glow.dispose();
+    system.dispose();
+    renderer.dispose();
+    renderer.domElement.remove();
+    document.removeEventListener("visibilitychange", visibility);
+    lifetime.removeEventListener("abort", cleanup);
+  };
+  const visibility = () => { last = performance.now(); accumulator = 0; pointer?.reset(); };
+  document.addEventListener("visibilitychange", visibility);
+  lifetime.addEventListener("abort", cleanup, { once: true });
+  renderer.onDeviceLost = () => { if (!stopped) { cleanup(); onError("device-lost"); } };
+
+  /** One frame: presence and morph inputs, fixed-step physics, then the (post-processed) render. */
+  const step = (dt: number, now: number) => {
+    accumulator = Math.min(accumulator + dt, STEP * 8);
+    if (handle.tuning) {
+      syncUniforms(u, config);
+      fx.glow.strength.value = config.bloom.strength;
+      fx.glow.radius.value = config.bloom.radius; fx.glow.threshold.value = config.bloom.threshold;
+    }
+    const presence = inputs.presence.sample(dt, now);
+    const morph = inputs.morph.sample(dt);
+    // The controller only replaces its target while the body is at rest, so this upload never snaps.
+    if (revision !== inputs.morph.revision) {
+      revision = inputs.morph.revision;
+      spinAngle = 0;
+      if (inputs.morph.target) {
+        try { system.setTarget(inputs.morph.target); } catch { /* invalid targets are rejected upstream */ }
+      }
+    }
+    u.morph.value = morph;
+    if (inputs.framing) frameView(inputs.framing.sample(dt));
+    const body = inputs.body.sample(dt, now, calm());
+    u.bodyMorph.value = body.level;
+    u.figureOrbit.value = body.orbit;
+    const anchors = u.anchors.array as Vector4[];
+    for (let i = 0; i < anchors.length; i++) anchors[i].fromArray(body.anchors, i * 4);
+    u.eyesMorph.value = body.eyes;
+    const eyes = u.eyes.array as Vector4[];
+    for (let i = 0; i < eyes.length; i++) eyes[i].fromArray(body.eyeParams, i * 4);
+    // A spinning visual (MorphTarget.motion) turns slowly about the view axis; each new target starts upright.
+    const spin = inputs.morph.target?.motion?.spin ?? 0;
+    if (morph > 0 && Number.isFinite(spin) && spin !== 0) spinAngle = (spinAngle + spin * dt * (calm() ? 0.15 : 1)) % (Math.PI * 2);
+    u.formedAngle.value = spinAngle;
+    const view = inputs.orbit?.sample(dt) ?? { yaw: 0, pitch: 0, zoom: 1, depth: 0 };
+    u.formedYaw.value = view.depth ? view.yaw : 0; u.formedPitch.value = view.depth ? view.pitch : 0;
+    u.formedZoom.value = view.depth ? view.zoom : 1; u.formedDepth.value = view.depth;
+    const blend = morphSpeechBlend(morph);
+    u.speechGain.value = blend.speech; u.formedShimmer.value = blend.shimmer;
+    for (let i = 0; i < presence.assistantBands.length; i++) u.spectrum.array[i] = presence.assistantBands[i];
+    const speech = speechMotion.sample(presence.assistantAmplitude, dt);
+    u.voiceBody.value = speech.body; u.voiceArticulation.value = speech.articulation;
+    u.voiceAccent.value = speech.accent; u.voiceFollow.value = speech.follow;
+    u.voicePhase.value = speech.phase;
+    u.voiceDirection.value.set(speech.directionX, speech.directionY, speech.directionZ);
+    u.attention.value = presence.focus;
+    u.focusPulse.value = presence.acousticFocus;
+    u.thinking.value = presence.thinking;
+    u.listeningAudio.value = presence.userAmplitude;
+    u.energy.value = presence.energy;
+    u.responding.value = presence.responding;
+    u.warmth.value = presence.warmth;
+    u.motion.value = calm() ? 0.15 : 1;
+    const sound = inputs.audio?.sample(dt);
+    if (sound) {
+      for (let i = 0; i < sound.bands.length && i < u.audioBands.array.length; i++) u.audioBands.array[i] = sound.bands[i];
+      u.audioLevel.value = sound.level; u.audioBass.value = sound.bass; u.audioMid.value = sound.mid; u.audioTreble.value = sound.treble;
+      u.audioBeat.value = sound.beat; u.audioGain.value = sound.gain * (calm() ? 0.3 : 1);
+      u.sphereAudio.value = sound.sphere; u.ringMorph.value = sound.ring;
+      const ring = ringParams(sound.layout);
+      u.ringRadius.value = ring.radius; u.ringHeight.value = ring.height; u.ringCore.value = ring.core; u.ringCoreScale.value = ring.coreScale; u.ringFlow.value = ring.flow * (calm() ? 0.2 : 1);
+    }
+    const writing = inputs.writing?.sample(dt) ?? NO_WRITING;
+    u.writeProgress.value = writing.progress; u.writeComplete.value = writing.complete; u.writePen.value = writing.pen;
+    u.writeStroke.value = writing.stroke; u.writeRest.value = writing.rest; u.writeGhost.value = writing.ghost;
+    u.writeTip.value.set(...writing.tip);
+    const colors = palette.sample(dt);
+    u.baseColor.value.setRGB(...colors.cool); u.warmColor.value.setRGB(...colors.warm); u.formedColor.value.setRGB(...colors.formed);
+    try {
+      while (accumulator >= STEP) {
+        if (pointer) {
+          pointer.step(STEP, config.pusher.follow, config.pusher.maxSpeed);
+          u.pusherPosition.value.copy(pointer.position);
+          u.pusherVelocity.value.copy(pointer.velocity);
+        }
+        u.active.value = pointer?.active ? (calm() ? 0.25 : 1) : 0;
+        u.clock.value += STEP;
+        renderer.compute(system.compute);
+        if (stopped) return false;
+        accumulator -= STEP;
+      }
+      // Bloom is a secondary effect: it is the first thing adaptive quality gives up.
+      if (quality.effects) fx.post.render(); else renderer.render(scene, camera);
+      frames++;
+    } catch {
+      if (!stopped) { cleanup(); onError("device-lost"); }
+      return false;
+    }
+    return true;
+  };
+
+  const handle: RuntimeHandle = {
+    backend: "webgpu", config, tuning: false,
+    quality: () => ({ tier: quality.tier, ceiling: quality.ceiling, count: quality.settings().count, effects: quality.effects, frameMs, frames }),
+    setTier(tier) { quality.force(Math.min(range.max, tier)); applyQuality(); },
+    toWorld(clientX, clientY) {
+      const bounds = renderer.domElement.getBoundingClientRect();
+      if (!(bounds.width > 0 && bounds.height > 0)) return null;
+      const point = new Vector3((clientX - bounds.left) / bounds.width * 2 - 1, -((clientY - bounds.top) / bounds.height) * 2 + 1, 0.5).unproject(camera);
+      const direction = point.sub(camera.position);
+      if (Math.abs(direction.z) < 1e-6) return null;
+      const t = -camera.position.z / direction.z;
+      return [camera.position.x + direction.x * t, camera.position.y + direction.y * t];
+    },
+    project([x, y, z]) {
+      const bounds = renderer.domElement.getBoundingClientRect();
+      if (!(bounds.width > 0 && bounds.height > 0)) return null;
+      // The formed visual's sway (material.ts): x shifts with depth, slowly, while it is formed and flat.
+      const sway = Math.sin(u.clock.value * 0.5) * 0.07 * u.morph.value * (1 - u.formedDepth.value);
+      const v = new Vector3(x + z * sway, y, z).project(camera);
+      if (!(v.z < 1)) return null;
+      return [bounds.left + (v.x + 1) / 2 * bounds.width, bounds.top + (1 - v.y) / 2 * bounds.height];
+    },
+    setPalette(next, immediate) { palette.set(next); if (immediate) palette.settle(); },
+    setFrameCap(fps) { minFrameMs = fps && fps > 0 ? 1000 / fps : 0; },
+    dispose: cleanup,
+  };
+  let minFrameMs = 0;
+  const animate = (now: number) => {
+    if (stopped) return;
+    if (minFrameMs && now - last < minFrameMs - 2) { frame = requestAnimationFrame(animate); return; }
+    const rawDt = (now - last) / 1000;
+    last = now;
+    if (!document.hidden) {
+      const dt = Math.min(Math.max(rawDt, 0), STEP * 8);
+      if (!minFrameMs && rawDt > 0 && rawDt < 0.15) frameMs += (rawDt * 1000 - frameMs) * 0.05;
+      if (fixed === null && !minFrameMs && quality.sample(rawDt)) applyQuality();
+      if (!step(dt, now / 1000)) return;
+    }
+    if (!stopped) frame = requestAnimationFrame(animate);
+  };
+  frame = requestAnimationFrame(animate);
+  return handle;
+}
