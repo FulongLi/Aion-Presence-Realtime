@@ -343,6 +343,28 @@ export class PresenceHub {
     if (JSON.stringify(this.surfaceState()) !== before) this.changed();
   }
 
+  /**
+   * Realtime delta (not in the Plugin): a viewer whose event stream another HTTP server serves (the Realtime app's
+   * Next.js route), treated exactly like a companion window connected to /events. Returns its detach function.
+   */
+  attach(viewer: { write(frame: string): unknown; end(): void }, window: string): () => void {
+    const res = viewer as unknown as ServerResponse;
+    res.write(`retry: 2000\n\n`);
+    this.viewers.set(res, window);
+    this.voiceSync.viewersChanged();
+    if (this.retiring && !this.retiring.has(window)) {
+      for (const [other, id] of this.viewers) if (this.retiring.has(id)) other.write("event: superseded\ndata: {}\n\n");
+      this.retiring = null;
+    }
+    this.changed();
+    return () => {
+      if (!this.viewers.delete(res)) return;
+      if (![...this.viewers.values()].includes(window)) { this.reports.delete(window); this.diagnostics.delete(window); }
+      this.voiceSync.viewersChanged();
+      this.changed();
+    };
+  }
+
   /** Keeps media for the surfaces under the type its bytes actually are (never what a caller claims). */
   addMedia(data: Buffer, _claimed?: string): MediaRef {
     const mime = sniffMedia(data);

@@ -83,7 +83,7 @@ const tested = (version: string, list: string[]) => list.some(v => version === v
 /** The environment the simulation programs run in: the user's PATH and home, a fixed locale, ELMER_HOME when known. */
 export function toolEnv(tools: Pick<SimTools, "elmerHome">, base: NodeJS.ProcessEnv = process.env): NodeJS.ProcessEnv {
   const keep = ["PATH", "HOME", "USER", "TMPDIR", "TEMP", "TMP", "SYSTEMROOT", "LD_LIBRARY_PATH", "DYLD_FALLBACK_LIBRARY_PATH"];
-  const env: NodeJS.ProcessEnv = { LANG: "C", LC_ALL: "C", OMP_NUM_THREADS: "1" };
+  const env = { LANG: "C", LC_ALL: "C", OMP_NUM_THREADS: "1" } as Partial<NodeJS.ProcessEnv> as NodeJS.ProcessEnv;
   for (const key of keep) if (base[key]) env[key] = base[key];
   if (tools.elmerHome) env.ELMER_HOME = tools.elmerHome;
   return env;

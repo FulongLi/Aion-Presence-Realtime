@@ -31,3 +31,15 @@ backends. Every local change to a file in this directory is listed below, so a l
 
 | File | Change | Why |
 | --- | --- | --- |
+| `host/hostManifest.json` (new) | Name, version and homepage of the host application. | Replaces the Plugin's `plugins/aion-presence/plugin.json` import, which lies outside `src/`. |
+| `host/resolver/net.ts` | Imports `../hostManifest.json`; the User-Agent says `(Realtime voice app; +…)` instead of `(Codex plugin; +…)`. | Public data providers (Nominatim, Wikimedia, Valhalla, OSM tiles) ask for an honest, identifying User-Agent. |
+| `host/sim/tools.ts` | `toolEnv` builds its environment with a cast. | Next.js's types make `NODE_ENV` a required `ProcessEnv` key; behaviour is unchanged. |
+| `host/hub/hub.ts` | New public `attach(viewer, window)`: a viewer whose event stream another HTTP server serves. | Realtime serves the hub's snapshots from a Next.js route instead of the hub's own loopback HTTP server. Mirrors the private `subscribe`. |
+
+## Tests
+
+The Plugin's tests for this core are ported to [`tests/presence-core`](../../tests/presence-core) with import paths
+rewritten. Removed there, because they test the Plugin's package rather than this core: the Codex Stop-hook speech
+estimate, skill-file checks (Storyteller Mode, narration style), the native macOS audio bridge's Swift sources, the
+plugin manifest validation and the repository governance check. The real-toolchain FEM tests run here unchanged
+(they skip, and say so, without FreeCAD, Gmsh and Elmer).

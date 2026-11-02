@@ -1,4 +1,4 @@
-import manifest from "../../../plugins/aion-presence/plugin.json" with { type: "json" };
+import manifest from "../hostManifest.json" with { type: "json" };
 import { ResolveError } from "../../visual/errors";
 
 /**
@@ -54,7 +54,7 @@ export const ALLOWED_HOSTS: readonly HostRule[] = [
 ];
 
 /** Identifies the plugin to public data providers, as their usage policies ask (name, version, project page). */
-export const USER_AGENT = `AionPresence/${manifest.version} (Codex plugin; +${manifest.homepage})`;
+export const USER_AGENT = `AionPresence/${manifest.version} (${manifest.host}; +${manifest.homepage})`;
 
 function hostAllowed(host: string, rules: readonly HostRule[]) {
   return rules.some(rule => typeof rule === "string" ? rule === host : rule.test(host));
