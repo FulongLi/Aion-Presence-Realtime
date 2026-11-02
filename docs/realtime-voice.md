@@ -1,4 +1,6 @@
-# SCF Presence Realtime
+# Realtime voice backends and the legacy body (detailed reference)
+
+> This was the README before the Presence Core sync (v0.2.0). The voice, key-handling and configuration sections remain accurate. The visual sections describe the **legacy body** (`src/aion`, `src/particle`, `src/visual-*`), which the promo film still uses; the live page now uses the Presence Core — see [PRESENCE-CORE.md](PRESENCE-CORE.md).
 
 SCF Presence Realtime is a native realtime voice AI with a living visual body. It connects directly to a realtime conversational model over WebRTC and reacts physically to listening, thinking and speaking. The AI can also choose to show information with its particle body, using native function tools.
 
@@ -6,7 +8,7 @@ It has **two selectable voice backends** that drive the same body, for A/B compa
 
 The particle sphere is the interface. There is no chat window, waveform or dashboard. The AI hears you, thinks, answers in its own voice, and sometimes takes a brief visual shape. That can be a person, a car, a product, a map, the terrain of a real region, a time, number, word or symbol, or a brief emoji reaction like 🎉. It is also starting to develop **a visual language of its own**: a yin-yang, the eight trigrams, Orion or the ♈ sign are drawn directly from understanding, not found by an image search (see [Visual Form Packs](#visual-form-packs)). Then it returns to the sphere.
 
-SCF supports **open 2D and 2.5D visual expression**: the AI isn't limited to a fixed set of icons. A Visual Resolver finds or builds an appropriate picture or height field for whatever is worth seeing. **True 3D object models are intentionally deferred** (see [the future 3D direction](docs/architecture.md#future-true-3d)).
+SCF supports **open 2D and 2.5D visual expression**: the AI isn't limited to a fixed set of icons. A Visual Resolver finds or builds an appropriate picture or height field for whatever is worth seeing. **True 3D object models are intentionally deferred** (see [the future 3D direction](architecture.md#future-true-3d)).
 
 ```text
 sphere  →  temporary visual expression  →  sphere
@@ -58,7 +60,7 @@ The Realtime path in detail (GPT-Live differs only in the box at the top and the
 - **Visuals** come from native Realtime function tools executed in the browser. The Visual Resolver turns them into targets using open sources (Wikipedia, Wikimedia Commons, Openverse, OpenStreetMap geocoding, AWS Terrain Tiles). Nothing parses transcripts, reads the DOM, runs through MCP or a relay, or guesses a visual.
 - **The server** has one job: use the permanent `OPENAI_API_KEY` to start a session with a fixed config. For Realtime it mints a short-lived client secret; for GPT-Live it creates the session from the browser's SDP offer and returns only the SDP answer.
 
-More detail, including how each part maps to the code: [docs/architecture.md](docs/architecture.md).
+More detail, including how each part maps to the code: [docs/architecture.md](architecture.md).
 
 ## Setup
 
@@ -75,7 +77,7 @@ Open <http://localhost:3000> and allow the microphone. Then talk.
 
 ### API key handling
 
-- One key for both backends. `OPENAI_API_KEY` is read only by the server routes [`src/app/api/realtime/token/route.ts`](src/app/api/realtime/token/route.ts) and [`src/app/api/live/session/route.ts`](src/app/api/live/session/route.ts), which import `server-only`. It is never bundled into the browser or returned in a response.
+- One key for both backends. `OPENAI_API_KEY` is read only by the server routes [`src/app/api/realtime/token/route.ts`](../src/app/api/realtime/token/route.ts) and [`src/app/api/live/session/route.ts`](../src/app/api/live/session/route.ts), which import `server-only`. It is never bundled into the browser or returned in a response.
 - **Realtime:** the browser receives only an ephemeral client secret (`ek_…`). The secret lives for 60 seconds, just long enough for the WebRTC SDP exchange with `https://api.openai.com/v1/realtime/calls`.
 - **GPT-Live:** the browser sends its SDP offer to SCF's server, which calls `POST https://api.openai.com/v1/live/sessions` with the key and returns only `{ sdp, sessionId, model, backendModel, voice }`. The browser holds no credential at all, and the session restricts the browser's data channel to returning tool results, continuing the backend, and closing.
 - Models, voices, instructions, tools and turn detection are fixed on the server, so the browser cannot change them.
@@ -112,9 +114,9 @@ Invalid values fall back to the defaults and are never forwarded.
 | Entity | **Aion**, an interactive AI presence |
 | Identity | created by **Spirit Connect**, led by **Fulong** |
 
-Aion is kept as three separate concepts ([`src/aion/`](src/aion/)):
+Aion is kept as three separate concepts ([`src/aion/`](../src/aion/)):
 
-- **Identity** (who Aion is): one frozen manifest, [`aion/identity.ts`](src/aion/identity.ts). Both backends' prompts, the greeting, tool descriptions and the debug panel read it; a test checks that the identity literals appear nowhere else. The prompts give the facts, not a script: wording may vary, facts may not, the names stay unchanged in every language, and Aion never claims consciousness or feelings. Aion starts in English and follows the user's language.
+- **Identity** (who Aion is): one frozen manifest, [`aion/identity.ts`](../src/aion/identity.ts). Both backends' prompts, the greeting, tool descriptions and the debug panel read it; a test checks that the identity literals appear nowhere else. The prompts give the facts, not a script: wording may vary, facts may not, the names stay unchanged in every language, and Aion never claims consciousness or feelings. Aion starts in English and follows the user's language.
 - **State** (what Aion is doing): `idle`, `listening`, `thinking`, `speaking`, plus `presenting` (a visual tool is working) and the one-shot gestures `greeting`, `acknowledging` (a small nod when the user's turn ends) and `curious` (debug only). The state is derived only from real signals: the PresenceEngine's mode (microphone VAD, backend turn events, the actual assistant audio) and the visual lifecycle. No emotion is inferred. Invalid states fall back to idle.
 - **Body** (which form Aion occupies): the persistent body, `sphere` (the original) or `figure` (the Particle Figure), changed with the `set_body_form` tool ("take a human form", "go back to the sphere", "变成人形", "回到球体").
 
@@ -127,7 +129,7 @@ sphere → visual → sphere
 
 The runtime renders the persistent body as a rest layer under every visual, so the same particles carry every change. `return_to_sphere` ends a visual (back to the persistent body) and never changes that body.
 
-**Particle Figure.** A minimal, quiet humanoid drawn in the sphere's own language, with no avatar, model or bitmap. It is built from a 15-anchor skeleton ([`figure/skeleton.ts`](src/aion/figure/skeleton.ts)) and sampled particle paths ([`figure/layout.ts`](src/aion/figure/layout.ts)): a ring of light for the head, fine lines for the bones, small joint clusters, a faint torso veil, loose grains and a deep near-black dust. Poses move anchors only ([`figure/pose.ts`](src/aion/figure/pose.ts)), and the grains follow on the GPU. Body language is small and low-frequency: breathing and a slow weight shift at rest, a lean and head tilt when listening, stillness (and a faint halo turning about the head) when thinking, a slight voice-driven lift of the hands when speaking, one short wave for the greeting, a nod as acknowledgement, and an open arm toward a visual being presented.
+**Particle Figure.** A minimal, quiet humanoid drawn in the sphere's own language, with no avatar, model or bitmap. It is built from a 15-anchor skeleton ([`figure/skeleton.ts`](../src/aion/figure/skeleton.ts)) and sampled particle paths ([`figure/layout.ts`](../src/aion/figure/layout.ts)): a ring of light for the head, fine lines for the bones, small joint clusters, a faint torso veil, loose grains and a deep near-black dust. Poses move anchors only ([`figure/pose.ts`](../src/aion/figure/pose.ts)), and the grains follow on the GPU. Body language is small and low-frequency: breathing and a slow weight shift at rest, a lean and head tilt when listening, stillness (and a faint halo turning about the head) when thinking, a slight voice-driven lift of the hands when speaking, one short wave for the greeting, a nod as acknowledgement, and an open arm toward a visual being presented.
 
 **First greeting.** Once per page session, only after the microphone, the voice session and the body are ready and it has been quiet for a moment: *"Hi, I'm Aion. You can just talk to me naturally. If you'd like, ask me to show you something."* with the greeting gesture. If the user speaks first, it is dropped. Reconnects, backend switches and idle pauses do not greet again. Realtime speaks it as one `response.create` with its own instructions; GPT-Live receives it as `session.commentary.append` (which is why that event is on the Live frontend allowlist).
 
@@ -143,7 +145,7 @@ Both backends share everything except the protocol adapter: the one microphone s
 | --- | --- | --- |
 | Session | browser → SCF (`/api/realtime/token`) → ephemeral secret → browser posts SDP to `/v1/realtime/calls` | browser posts a complete SDP offer to SCF (`/api/live/session`) → SCF posts `{ session, transport: { type: "webrtc", sdp } }` to `/v1/live/sessions` → SDP answer; ready on `session.started` |
 | Who selects tools | the Realtime model | the Responses backend (`delegation.type: "responses"`) |
-| Prompt | one prompt ([`realtime/instructions.ts`](src/realtime/instructions.ts)) | a short voice prompt, and a backend prompt with the detailed visual rules ([`live/instructions.ts`](src/live/instructions.ts)); the visual rules are shared word for word ([`voice/visualGuidance.ts`](src/voice/visualGuidance.ts)) |
+| Prompt | one prompt ([`realtime/instructions.ts`](../src/realtime/instructions.ts)) | a short voice prompt, and a backend prompt with the detailed visual rules ([`live/instructions.ts`](../src/live/instructions.ts)); the visual rules are shared word for word ([`voice/visualGuidance.ts`](../src/voice/visualGuidance.ts)) |
 | Tool call | `response.function_call_arguments.done` | nested `response.event` › `response.output_item.done` (a finished `function_call` item) |
 | Tool result | `conversation.item.create` (+ `response.create` if the response never spoke) | `response.item.create { function_call_output }` for every call, then `response.create` to continue the backend |
 | Turns | OpenAI VAD `speech_started`/`stopped`; barge-in = `output_audio_buffer.cleared` | full duplex: no turn or barge-in events. Transcript deltas show who is talking; the assistant's audio stopping under the user is the cut |
@@ -156,7 +158,7 @@ Both backends share everything except the protocol adapter: the one microphone s
 
 ## Native visual tools
 
-The model gets eleven function tools (see [`src/voice/tools/definitions.ts`](src/voice/tools/definitions.ts)): ten temporary visuals and `set_body_form`, which changes Aion's persistent body (see [Aion](#aion)). The same definitions are registered as Realtime `session.tools` and as GPT-Live `delegation.responses.tools`. Two are open, one draws any registered visual form, one shows any single emoji, and the rest are convenience shapes. There are no per-object, per-form or per-emoji tools like `show_car`, `show_mountain`, `show_company_logo`, `show_orion` or `show_smile`.
+The model gets eleven function tools (see [`src/voice/tools/definitions.ts`](../src/voice/tools/definitions.ts)): ten temporary visuals and `set_body_form`, which changes Aion's persistent body (see [Aion](#aion)). The same definitions are registered as Realtime `session.tools` and as GPT-Live `delegation.responses.tools`. Two are open, one draws any registered visual form, one shows any single emoji, and the rest are convenience shapes. There are no per-object, per-form or per-emoji tools like `show_car`, `show_mountain`, `show_company_logo`, `show_orion` or `show_smile`.
 
 | Tool | Arguments | Becomes |
 | --- | --- | --- |
@@ -199,7 +201,7 @@ tool call ─► validated VisualAction ─► Visual Resolver ─► VisualTarg
 
 - **Local brand assets first.** A `show_image` query that names a curated first-party asset (e.g. "Spirit Connect logo", "our company logo") is answered from the repository, never from a public search. See [Local brand assets](#local-brand-assets).
 
-Details, guardrails and the future 3D extension point: [docs/architecture.md → Visual Resolver](docs/architecture.md#visual-resolver-open-2d-and-25d-visuals).
+Details, guardrails and the future 3D extension point: [docs/architecture.md → Visual Resolver](architecture.md#visual-resolver-open-2d-and-25d-visuals).
 
 ## Visual Form Packs
 
@@ -210,7 +212,7 @@ visual retrieval:  AI ─► search an external visual ─► particle form
 visual language:   AI ─► understand the concept ─► procedural form ─► particles
 ```
 
-`show_form` lets the AI form a concept directly, with the same particle body and the same lifecycle (sphere → form → sphere), with no network and no image search. Forms live in an extensible, data-driven registry ([`src/visual-forms/`](src/visual-forms/)): every entry has an id, a category, a renderer, a label, aliases (any language or script, plus the Unicode symbol) and optional variants. The tool's list of ids is generated from it, so both voice backends learn a new pack automatically.
+`show_form` lets the AI form a concept directly, with the same particle body and the same lifecycle (sphere → form → sphere), with no network and no image search. Forms live in an extensible, data-driven registry ([`src/visual-forms/`](../src/visual-forms/)): every entry has an id, a category, a renderer, a label, aliases (any language or script, plus the Unicode symbol) and optional variants. The tool's list of ids is generated from it, so both voice backends learn a new pack automatically.
 
 ```text
 visual forms
@@ -230,11 +232,11 @@ visual forms
 
 Try it: "Show me yin yang." "Show me the Eight Trigrams." "Show me Qian." "Show me Orion." "Show me the Pleiades." "Show me the Aries zodiac sign." Names resolve deterministically: "Leo" or "the Leo sign" is the zodiac glyph, "the Leo constellation" is the star map, "Scorpio" is the sign and "Scorpius" the constellation, and "fire trigram" is ☲. Ordinary words never claim a form alone (`show_form("fish")` is `form-not-found`, never Pisces).
 
-**Adding a pack** (math, physics, chemistry, biology, music, engineering, mythology, …) means adding its data and renderer and one entry in `VISUAL_FORM_PACKS`. The tool, validation, resolver, debug panel and tests pick it up. Forms render into the existing target types: filled shapes into `Raster2DTarget` (`ink` style), and point-and-line structures (star maps now; graphs and molecules later) into the new `PointLayoutTarget`. The particle runtime gained only one generic parameter, a slow `spin` for a formed visual. Details: [docs/architecture.md → Visual Form Packs](docs/architecture.md#visual-form-packs).
+**Adding a pack** (math, physics, chemistry, biology, music, engineering, mythology, …) means adding its data and renderer and one entry in `VISUAL_FORM_PACKS`. The tool, validation, resolver, debug panel and tests pick it up. Forms render into the existing target types: filled shapes into `Raster2DTarget` (`ink` style), and point-and-line structures (star maps now; graphs and molecules later) into the new `PointLayoutTarget`. The particle runtime gained only one generic parameter, a slow `spin` for a formed visual. Details: [docs/architecture.md → Visual Form Packs](architecture.md#visual-form-packs).
 
 ## Local brand assets
 
-Your own company assets should not depend on public image search. They live in the repository under `public/assets/` and are listed in a small manifest, [`src/visual-resolver/sources/localAssets.ts`](src/visual-resolver/sources/localAssets.ts):
+Your own company assets should not depend on public image search. They live in the repository under `public/assets/` and are listed in a small manifest, [`src/visual-resolver/sources/localAssets.ts`](../src/visual-resolver/sources/localAssets.ts):
 
 ```ts
 {
@@ -301,8 +303,8 @@ npm run promo:prepare    # record the dialogue once (OpenAI TTS, needs OPENAI_AP
 npm run promo:render     # → output/scf-presence-promo-1080p.mp4 (1920×1080, 60 fps, H.264 + AAC)
 ```
 
-Copy, dialogue and timing live in [`src/promo/script.ts`](src/promo/script.ts). Architecture, options and
-how to change the film: [docs/promo.md](docs/promo.md).
+Copy, dialogue and timing live in [`src/promo/script.ts`](../src/promo/script.ts). Architecture, options and
+how to change the film: [docs/promo.md](promo.md).
 
 ## Testing
 
@@ -332,7 +334,7 @@ The unit tests cover:
 - **Local brand assets:** manifest, alias and brand matching (case-insensitive, company-logo aliases, unrelated queries never match), local-first priority with no external calls, missing/wrong-type/unsafe files failing without a web fallback, trusted paths only (no remote SVG), SVG safety checks, sizing and aspect ratio, transparency preservation and background keying, logo particle sampling, and `show_image` through the real `ToolExecutor`.
 - **Server:** the ephemeral secret request (GA session shape, no beta header), the hashed safety identifier, configuration fallbacks, origin and body checks, upstream error mapping, and the key never appearing in a response.
 
-The end-to-end check against OpenAI is a manual checklist: [docs/smoke-test.md](docs/smoke-test.md). CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs lint, typecheck, tests and build with no API key. Network timeouts use ordinary (ref'd) timers, so the hung-request tests are deterministic on Node 22 in CI.
+The end-to-end check against OpenAI is a manual checklist: [docs/smoke-test.md](smoke-test.md). CI ([.github/workflows/ci.yml](.github/workflows/ci.yml)) runs lint, typecheck, tests and build with no API key. Network timeouts use ordinary (ref'd) timers, so the hung-request tests are deterministic on Node 22 in CI.
 
 ## Deployment
 
@@ -351,7 +353,7 @@ No database, queue, WebSocket server or extra infrastructure is needed.
 - **No authentication.** Anyone who can load a public deployment can start sessions on your key. See [API key handling](#api-key-handling).
 - **Echo:** SCF relies on the browser's echo cancellation and OpenAI's turn detection. On loud speakers without headphones, the assistant may occasionally interrupt itself.
 - **Autoplay:** if the browser blocks audio without a gesture, the page asks for one tap ("Tap anywhere to begin") rather than letting the AI talk silently.
-- **GPT-Live is new and fast-moving.** The adapter follows the GPT-Live documentation and API reference as of September 2026 (event names, `POST /v1/live/sessions`, Responses delegation). It has unit tests against those shapes, but it still needs a real end-to-end check with your key ([smoke test](docs/smoke-test.md)). GPT-Live has no barge-in or end-of-speech events, so the body infers the user taking the floor from the assistant's audio stopping while transcripts show the user talking, and "user speaking" follows transcript deltas, which arrive a little later than speech. Switching backends starts a new conversation. Backend usage is reported per nested response and may be missing if the API omits it.
+- **GPT-Live is new and fast-moving.** The adapter follows the GPT-Live documentation and API reference as of September 2026 (event names, `POST /v1/live/sessions`, Responses delegation). It has unit tests against those shapes, but it still needs a real end-to-end check with your key ([smoke test](smoke-test.md)). GPT-Live has no barge-in or end-of-speech events, so the body infers the user taking the floor from the assistant's audio stopping while transcripts show the user talking, and "user speaking" follows transcript deltas, which arrive a little later than speech. Switching backends starts a new conversation. Backend usage is reported per nested response and may be missing if the API omits it.
 - **The Spirit Connect logo is not in the repository yet.** Add `public/assets/brand/spirit-connect-logo.svg`; until then the logo request reports `image-unavailable`. SVG rendering itself happens in the browser and was checked through its pure parts (safety, sizing, normalization, sampling) in CI.
 - **Reconnects start a new conversation.** OpenAI keeps the context only within a session. After a dropped connection or idle end, the model starts fresh.
 - **Images** are chosen heuristically, with no vision model. Without `BRAVE_SEARCH_API_KEY` they come only from openly licensed sources, so some recent products or public figures may have no usable image. The tool then reports `image-not-found`/`portrait-not-found` and the conversation continues. Portrait crops use a fixed head-and-shoulders band, not face detection.
@@ -370,4 +372,4 @@ SCF-Presence-Realtime  = native API-first AI product
 
 [SCF-AI-Presence](https://github.com/FulongLi/SCF-AI-Presence) gives a body to *someone else's* conversation: it follows ChatGPT through a Chrome extension, DOM observation, tab audio, an MCP relay and local Visual Intent inference. That complexity exists because it does not own the conversation.
 
-This repository owns the conversation. It keeps SCF-AI-Presence's mature particle body and presence physics: the WebGPU runtime, sphere, pointer interaction, idle/listening/thinking/speaking physics, acoustic focus, spectrum response, adaptive quality, Visual Actions, portrait sampling, text/number/clock/symbol rendering, speech/morph blending and bloom/material. It drops everything provider-specific (see [docs/architecture.md](docs/architecture.md#ported-from-scf-ai-presence)). The two repositories are independent. SCF-AI-Presence is unchanged.
+This repository owns the conversation. It keeps SCF-AI-Presence's mature particle body and presence physics: the WebGPU runtime, sphere, pointer interaction, idle/listening/thinking/speaking physics, acoustic focus, spectrum response, adaptive quality, Visual Actions, portrait sampling, text/number/clock/symbol rendering, speech/morph blending and bloom/material. It drops everything provider-specific (see [docs/architecture.md](architecture.md#ported-from-scf-ai-presence)). The two repositories are independent. SCF-AI-Presence is unchanged.

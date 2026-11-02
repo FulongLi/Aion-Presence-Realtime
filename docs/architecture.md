@@ -1,4 +1,9 @@
-# Architecture
+# Architecture (legacy body)
+
+> Since v0.2.0 the live page uses the **Presence Core** vendored from Aion Presence Plugin
+> ([PRESENCE-CORE.md](PRESENCE-CORE.md)). This document describes the original Realtime body (`src/aion`,
+> `src/particle`, `src/visual-*`), which the promo film still uses, and the voice layer (`src/realtime`, `src/live`,
+> `src/voice`, `src/audio`), which is unchanged.
 
 One test decides every design choice here: **does this make SCF feel like one AI with one living body?**
 
