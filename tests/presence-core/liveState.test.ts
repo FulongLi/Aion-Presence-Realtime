@@ -9,7 +9,6 @@ import { engineDefaults, PresenceEngine } from "../../src/presence-core/core/sig
 import type { ActivityState, AionState } from "../../src/presence-core/core/state";
 import type { StoreClock } from "../../src/presence-core/core/store";
 import { ANSWER_TAIL, PresenceHub } from "../../src/presence-core/host/hub/hub";
-import { hookEventSchema } from "../../src/presence-core/host/hub/protocol";
 import { tempHome } from "./helpers";
 
 /**

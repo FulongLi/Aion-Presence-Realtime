@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { connect } from "node:net";
-import { existsSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { AudioAnalyzer, DIGITAL_SOURCE } from "../../src/presence-core/audio/analyzer";

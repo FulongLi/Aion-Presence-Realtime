@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import type { SceneDocument } from "../../src/presence-core/scene/ir";
 import { MATERIAL_PRESET_VALUES } from "../../src/presence-core/scene/ir";
 import { prepareSceneInput, SCENE_ISSUE_LIMIT, validateScene } from "../../src/presence-core/scene/validate";

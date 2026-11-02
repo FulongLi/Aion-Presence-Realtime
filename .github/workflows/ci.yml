@@ -20,6 +20,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # The Chinese Writing Pack data and the demo CAD model (pinned to Plugin fb9b210, checksum-verified).
+      - run: npm run presence:assets
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test

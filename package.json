@@ -14,7 +14,7 @@
     "prebuild": "npm run presence:cards",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.core.json",
     "test": "tsx --test tests/*.test.ts tests/presence-core/*.test.ts",
     "presence:cards": "tsx scripts/presence/card-runtime.ts",
     "presence:assets": "tsx scripts/presence/assets.ts",

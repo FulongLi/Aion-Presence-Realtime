@@ -7,7 +7,7 @@ import { findCodepoint, joinRecords, pushVarint, readPackHeader, readPackIndex, 
 import { canonicalJson, decodeHanzi, encodeHanzi, formatHalf } from "../../src/presence-core/writing/hanzi/codec";
 import { flattenOutline, insideOutline, outlineArea, ringArea, validateHanzi, HANZI_EM } from "../../src/presence-core/writing/hanzi/geometry";
 import { characterForm, parseOpenccTable } from "../../src/presence-core/writing/hanzi/variants";
-import { CHINESE_PACK_DIR, CHINESE_PACK_FILES } from "../../src/presence-core/writing/hanzi/sources";
+import { CHINESE_PACK_FILES } from "../../src/presence-core/writing/hanzi/sources";
 import { ChinesePack, locateChinesePack } from "../../src/presence-core/host/writing/chinesePack";
 import { resolveWriting, WRITING_LIMITS } from "../../src/presence-core/host/writing/resolve";
 import { composeWriting, smoothMedian, trimLeadIn } from "../../src/presence-core/animation/stroke/compose";
@@ -35,7 +35,6 @@ import { toolMetadataReport, TOOL_METADATA_BUDGET, TOOL_METADATA_TARGET } from "
 import { TOOL_NAMES, TOOL_DESCRIPTIONS } from "../../src/presence-core/host/mcp/server";
 import { hubCommandSchema } from "../../src/presence-core/host/hub/protocol";
 import { loadVoiceSync } from "../../src/presence-core/host/audio/voiceSync";
-import { PLUGIN_ROOT } from "./pluginPackage";
 import { writeFileSync } from "node:fs";
 import { VOICE_SYNC_FILE } from "../../src/presence-core/host/paths";
 

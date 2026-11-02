@@ -1,4 +1,4 @@
-import type { SimFace, SimGeometry, Vec3 } from "../../src/sim/geometry";
+import type { SimFace, SimGeometry, Vec3 } from "../../../src/presence-core/sim/geometry";
 
 /**
  * v0.8 test fixtures: synthetic analysis geometries shaped exactly like the FreeCAD worker's `sim_geometry` output
