@@ -38,5 +38,11 @@ export function failureStatus(code: string | null | undefined): ToolResult {
   return failed("unresolved");
 }
 
+/**
+ * What a function call returns to the model: the legacy body's ToolResult, or the Presence Core's bounded outcome
+ * (src/presence-realtime/server/results.ts: ok, error code, message and what was shown). Both say `ok` honestly.
+ */
+export type ModelResult = ToolResult | { ok: boolean; error?: string; message?: string; [key: string]: unknown };
+
 /** The function_call_output payload is a JSON string. */
-export const serializeResult = (result: ToolResult) => JSON.stringify(result);
+export const serializeResult = (result: ModelResult) => JSON.stringify(result);

@@ -34,6 +34,8 @@ backends. Every local change to a file in this directory is listed below, so a l
 | `host/hostManifest.json` (new) | Name, version and homepage of the host application. | Replaces the Plugin's `plugins/aion-presence/plugin.json` import, which lies outside `src/`. |
 | `host/resolver/net.ts` | Imports `../hostManifest.json`; the User-Agent says `(Realtime voice app; +…)` instead of `(Codex plugin; +…)`. | Public data providers (Nominatim, Wikimedia, Valhalla, OSM tiles) ask for an honest, identifying User-Agent. |
 | `host/sim/tools.ts` | `toolEnv` builds its environment with a cast. | Next.js's types make `NODE_ENV` a required `ProcessEnv` key; behaviour is unchanged. |
+| `surface/music/notation.ts` | The Bravura font import reaches `node_modules` one directory further up (`../../../../`). | VexFlow does not export its font module; the Plugin imports it by a path relative to its own `src/`. |
+| `surface/view.ts` | Constructor option `speech` (a `WelcomeSpeech`); `listen(shared?)` takes the voice session's microphone stream and never stops a shared track. | Realtime speaks the welcome with its own voice and opens the microphone once. Defaults are the Plugin's behaviour. |
 | `host/hub/hub.ts` | New public `attach(viewer, window)`: a viewer whose event stream another HTTP server serves. | Realtime serves the hub's snapshots from a Next.js route instead of the hub's own loopback HTTP server. Mirrors the private `subscribe`. |
 
 ## Tests

@@ -1,4 +1,5 @@
 import { buildSessionConfig, sessionOptionsFromEnv, type RealtimeSessionConfig } from "../realtime/session";
+import type { SessionTool } from "../voice/tools/definitions";
 
 /**
  * Server-side minting of ephemeral Realtime client secrets (GA: POST /v1/realtime/client_secrets).
@@ -23,10 +24,10 @@ export interface ClientSecretRequest {
 
 export interface TokenResponse { status: number; body: Record<string, unknown> }
 
-export function clientSecretRequest(env: Record<string, string | undefined>): ClientSecretRequest {
+export function clientSecretRequest(env: Record<string, string | undefined>, tools?: readonly SessionTool[]): ClientSecretRequest {
   return {
     expires_after: { anchor: "created_at", seconds: CLIENT_SECRET_TTL_SECONDS },
-    session: buildSessionConfig(sessionOptionsFromEnv(env)),
+    session: buildSessionConfig({ ...sessionOptionsFromEnv(env), ...(tools ? { tools } : {}) }),
   };
 }
 
@@ -76,6 +77,8 @@ export async function createRealtimeToken(
   request: Request,
   env: Record<string, string | undefined>,
   upstream: typeof fetch = fetch,
+  /** The canonical registry's tools for this session (the route passes them); default: the legacy visual tools. */
+  tools?: readonly SessionTool[],
 ): Promise<TokenResponse> {
   const fail = (status: number, error: string, detail?: string): TokenResponse =>
     ({ status, body: detail && env.NODE_ENV !== "production" ? { error, detail } : { error } });
@@ -85,7 +88,7 @@ export async function createRealtimeToken(
   const body = await readBody(request);
   if (!body) return fail(400, "bad-request");
 
-  const payload = clientSecretRequest(env);
+  const payload = clientSecretRequest(env, tools);
   const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
   const safetyId = await safetyIdentifier(body.installationId, env.SCF_SAFETY_ID_SALT);
   if (safetyId) headers["OpenAI-Safety-Identifier"] = safetyId;

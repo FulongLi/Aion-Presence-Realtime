@@ -39,6 +39,12 @@ export interface VisualFunctionTool {
   };
 }
 
+/**
+ * Any function tool a voice session may carry: the legacy visual tools above, or the Presence Core's tools from the
+ * canonical registry (src/presence-realtime/server/registry.ts), which the server routes pass in.
+ */
+export interface SessionTool { type: "function"; name: string; description: string; parameters: Record<string, unknown> }
+
 const object = (properties: VisualFunctionTool["parameters"]["properties"] = {}, required: string[] = []) =>
   ({ type: "object" as const, properties, required, additionalProperties: false as const });
 

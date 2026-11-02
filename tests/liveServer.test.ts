@@ -7,6 +7,7 @@ import { buildSessionConfig, sessionOptionsFromEnv } from "../src/realtime/sessi
 import { createLiveSession, LIVE_SESSIONS_URL, validOffer } from "../src/server/liveSession";
 import { VISUAL_TOOL_NAMES, visualTools } from "../src/voice/tools/definitions";
 import { VISUAL_TOOL_RULES } from "../src/voice/visualGuidance";
+import { CAPABILITIES } from "../src/presence-realtime/server/registry";
 
 const KEY = "sk-test-permanent-key-never-in-browser";
 const INSTALL = "3f1c2a9e-8b7d-4c6e-9a1b-2d3e4f5a6b7c";
@@ -65,7 +66,8 @@ test("the Live backend registers the canonical visual tools; prompts are split, 
   for (const heading of ["Backchannel policy:", "Interruption policy:", "Delegation policy:"]) assert.ok(LIVE_VOICE_INSTRUCTIONS.includes(heading));
   assert.ok(LIVE_BACKEND_INSTRUCTIONS.includes(VISUAL_TOOL_RULES) && PRESENCE_INSTRUCTIONS.includes(VISUAL_TOOL_RULES),
     "Realtime and the Live backend share the visual rules word for word");
-  for (const name of VISUAL_TOOL_NAMES) assert.ok(LIVE_BACKEND_INSTRUCTIONS.includes(name));
+  // The prompts teach the Presence Core's vocabulary (the canonical registry), not the legacy tool list.
+  for (const { tool } of CAPABILITIES) assert.ok(LIVE_BACKEND_INSTRUCTIONS.includes(tool) && PRESENCE_INSTRUCTIONS.includes(tool), `${tool} is described to both backends`);
   assert.ok(LIVE_BACKEND_INSTRUCTIONS.includes("Spirit Connect logo"));
 });
 
