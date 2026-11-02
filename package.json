@@ -1,35 +1,49 @@
 {
   "name": "scf-presence-realtime",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
+  "type": "module",
   "description": "A native realtime voice AI with a living visual body.",
   "engines": {
     "node": ">=22"
   },
   "scripts": {
     "dev": "next dev",
+    "predev": "npm run presence:cards",
     "build": "next build --webpack",
+    "prebuild": "npm run presence:cards",
     "start": "next start",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
-    "test": "tsx --test tests/*.test.ts",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.core.json",
+    "test": "tsx --test tests/*.test.ts tests/presence-core/*.test.ts",
+    "presence:cards": "tsx scripts/presence/card-runtime.ts",
+    "presence:assets": "tsx scripts/presence/assets.ts",
     "promo": "tsx scripts/promo/serve.ts",
     "promo:prepare": "tsx scripts/promo/prepare.ts",
     "promo:render": "tsx scripts/promo/render.ts",
     "promo:check": "tsx scripts/promo/prepare.ts --check && tsx scripts/promo/render.ts --check"
   },
   "dependencies": {
+    "@modelcontextprotocol/client": "2.2.0",
+    "@modelcontextprotocol/core": "2.2.0",
+    "@modelcontextprotocol/ext-apps": "2.0.3",
+    "@modelcontextprotocol/server": "2.2.0",
+    "hanzi-writer": "3.7.3",
     "next": "16.3.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "server-only": "^0.0.1",
-    "three": "~0.182.0"
+    "three": "~0.182.0",
+    "vexflow": "5.0.0",
+    "zod": "4.6.5"
   },
   "devDependencies": {
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@types/three": "~0.182.0",
+    "@webgpu/types": "0.1.74",
+    "esbuild": "0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.3.6",
     "playwright-core": "^1.63.0",

@@ -7,6 +7,7 @@ import { AION_BODIES, AionBody, bodyTransition, PERSISTENT_BODIES, resolveBodyFo
 import { GreetingGate, type GreetingInputs } from "../src/aion/greeting";
 import { greetingLine, identityGuidance, onboardingGuidance, onboardingLine, ONBOARDING_EXAMPLES, supportedExamples } from "../src/aion/guidance";
 import { AION_IDENTITY } from "../src/aion/identity";
+import { AION_IDENTITY as CORE_IDENTITY } from "../src/presence-core/core/identity";
 import { AION_STATES, AionStateMachine, GESTURE_SECONDS, sanitizeState } from "../src/aion/state";
 import { createFigureLayout, FIGURE_KINDS, figurePoint, packAnchors, unpackAnchors } from "../src/aion/figure/layout";
 import { FigureAnimator, gestureTarget, NEUTRAL_POSE, solvePose } from "../src/aion/figure/pose";
@@ -38,11 +39,16 @@ test("identity strings live only in the manifest; everything else reads them fro
     }
   };
   walk(join(process.cwd(), "src"));
-  const canonical = join("src", "aion", "identity.ts");
+  // The vendored Presence Core keeps its own manifest (it must not import outside itself); the next test holds the two equal.
+  const canonical = [join("src", "aion", "identity.ts"), join("src", "presence-core", "core", "identity.ts")];
   for (const literal of ["Fulong", "Intelligent Presence", "\"Aion\""]) {
     const holders = files.filter(file => readFileSync(file, "utf8").includes(literal)).map(file => file.slice(file.indexOf("src")));
-    assert.deepEqual(holders, [canonical], `${literal} appears only in ${canonical}`);
+    assert.deepEqual(holders, canonical, `${literal} appears only in ${canonical.join(" and ")}`);
   }
+});
+
+test("the Presence Core's identity manifest states the same facts as Realtime's", () => {
+  assert.deepEqual({ ...CORE_IDENTITY }, { ...AION_IDENTITY });
 });
 
 test("both backends' prompts carry the identity facts, language following and honest self-description", () => {

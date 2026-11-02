@@ -1,0 +1,651 @@
+import { randomBytes, timingSafeEqual } from "node:crypto";
+import { chmodSync, existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import type { AddressInfo } from "node:net";
+import { join } from "node:path";
+import type { MediaRef } from "../../core/presentation";
+import { PresenceStore, systemClock, type StoreClock } from "../../core/store";
+import { interpretHook, isWorkState, type HookEvent } from "../hooks/mapping";
+import { MediaStore, sniffMedia } from "../media";
+import { GLB_MIME } from "../../cards/assets/gltf";
+import { FIELD_MIME } from "../../sim/field";
+import { APPEARANCE_FILE, AUDIO_FILE, DEFAULT_PORT, HOOK_HEARTBEAT_FILE, HOOKS_ACTIVE_MS, HUB_FILE, presenceHome, TOKEN_FILE, WELCOME_FILE } from "../paths";
+import { DEFAULT_APPEARANCE, isHexColor, type Appearance } from "../../core/colors";
+import { diagnosticsSchema, hookEventSchema, hubCommandSchema, mediaUploadSchema, surfaceReportSchema, type DisplayPreference, type HubCommand, type HubSnapshot, type SurfaceReport } from "./protocol";
+import { NativeAudioBridge, type BridgeOptions } from "../audio/bridge";
+import { VoiceSyncController } from "../audio/voiceSync";
+import { encodeFeatures } from "../../audio/wire";
+import { AUDIO_INTENSITIES, AUDIO_MODES, DEFAULT_AUDIO_SETTINGS, type AudioSettings } from "../../audio/settings";
+import { CARD_REPORT_BYTES, checkCardReport } from "../../cards/state";
+import { RateLimiter } from "../../cards/protocol";
+import { cardRegistry } from "../../core/cards";
+import { TileCache, tileAllowed } from "../route/tiles";
+import { routeBox } from "../../visual/geo/route";
+import { errorCode } from "../../visual/errors";
+
+export interface HubOptions {
+  /** Runtime directory (hub.json, token, hook heartbeat). Default: presenceHome(). */
+  home?: string;
+  /** Preferred port; 0 for any free port. Default AION_PRESENCE_PORT or DEFAULT_PORT. */
+  port?: number;
+  /** The presence surface page (the same single file the MCP Apps resource serves). */
+  page: () => string;
+  clock?: StoreClock;
+  /** v0.6: the map tile cache (injectable for tests). */
+  tiles?: TileCache;
+  /** The native audio bridge (injectable for tests); default: the macOS bridge, if installed. */
+  bridge?: Partial<Pick<BridgeOptions, "locate" | "launch" | "isMac" | "macosVersion" | "connectTimeout">>;
+}
+
+export interface HubDiscovery { version: 1; pid: number; port: number; hub: string; url: string; startedAt: number }
+
+const JSON_LIMIT = 64 * 1024;
+/** Base64 of the largest media: a 16 MB model (v0.4.5); images stay limited to 8 MB. */
+const MEDIA_LIMIT = 23 * 1024 * 1024;
+const IMAGE_BYTES = 8 * 1024 * 1024, MODEL_BYTES = 16 * 1024 * 1024;
+/** Card reports per window: a burst and a steady rate (a flooding page is refused, never queued). */
+const CARD_REPORT_RATE = { burst: 40, perSecond: 12 };
+
+/** A model-set work state outranks a generic hook-derived "working" for this long. */
+const MODEL_PRECEDENCE_MS = 120_000;
+/**
+ * After the turn ends, an answer that is still being said keeps Aion answering (Codex's voice is not a signal a
+ * plugin can read; its length is, from the Stop hook). Bounded, and any new prompt, interrupt or state ends it.
+ */
+export const ANSWER_TAIL = { minSeconds: 1.5, maxSeconds: 45 };
+/** v0.6: how long other "Open Aion" requests wait for a window that is being launched. */
+export const LAUNCH_WAIT_MS = 20_000;
+/** A new prompt is a new topic: a temporary presentation from the last one ends within this many seconds. */
+export const NEW_TOPIC_SECONDS = 15;
+
+/**
+ * The presence hub: the one place Aion's state lives while it is open. It is owned by the first Aion MCP
+ * process that needs it and serves, on 127.0.0.1 only:
+ *
+ *   GET  /              the companion surface (the same page an MCP Apps host embeds)
+ *   GET  /events        server-sent snapshots for companion windows
+ *   GET  /api/state     a snapshot, optionally long-polled (other MCP processes, embedded views)
+ *   POST /api/command   state commands from other Aion MCP processes
+ *   POST /api/media     images handed over by other Aion MCP processes
+ *   GET  /media/:id     image bytes for a surface
+ *   POST /api/hook      Codex lifecycle hook events
+ *   POST /api/card      a companion window's report about the interactive card it shows (v0.4.5)
+ *   GET  /tile/z/x/y    v0.6: an OpenStreetMap tile the open Route Explorer card shows (cached; only around its route)
+ *   GET  /health        identity check for discovery
+ *
+ * The event stream also carries `audio` events (v0.4.2): features of Codex's voice or another app's sound, analysed here
+ * from the native bridge, about 60 a second while something sounds. Only features, never samples; never stored.
+ *
+ * Every route needs the per-user token (from the runtime directory, mode 0600) and a loopback Host header,
+ * so other local users, web pages (DNS rebinding) and other sites cannot read or drive it.
+ */
+export class PresenceHub {
+  readonly id = randomBytes(6).toString("hex");
+  readonly store: PresenceStore;
+  readonly media = new MediaStore();
+  readonly home: string;
+  private server: Server | null = null;
+  private port = 0;
+  private token = "";
+  private revision = 0;
+  private display: DisplayPreference = "auto";
+  /** Connected companion windows, by the id each page chose for itself. */
+  private readonly viewers = new Map<ServerResponse, string>();
+  private readonly reports = new Map<string, SurfaceReport>();
+  /** The latest ?debug=1 diagnostics per window (debug pages only), kept in memory for `npm run diagnose`. */
+  private readonly diagnostics = new Map<string, { at: number; lines: Record<string, string> }>();
+  /** Card reports rate-limited per window (v0.4.5). */
+  private readonly cardLimits = new Map<string, RateLimiter>();
+  /** Windows to retire once a newer one connects (see the supersede command). */
+  private retiring: Set<string> | null = null;
+  private readonly waiters = new Set<() => void>();
+  private readonly clock: StoreClock;
+  private cancelSettle: (() => void) | null = null;
+  private turnActive = false;
+  /** When the agent said it is responding during this turn (null: it has not). */
+  private respondingAt: number | null = null;
+  private introduction = false;
+  /** v0.6: until when a companion window is being launched (any process), and the welcome's state. */
+  private launchingUntil = 0;
+  private welcomeRequested = false;
+  private surfaceMode: "companion" | "embedded" = "companion";
+  private welcomeDone: boolean;
+  private lastHookAt = 0;
+  private heartbeat?: ReturnType<typeof setInterval>;
+  /** The macOS capture bridge for Codex's voice and other apps' sound (started only when the user asks). */
+  readonly bridge: NativeAudioBridge;
+  /** Codex Voice Sync (v0.4.3): once the user opted in, Codex's voice is followed whenever a window is open. */
+  readonly voiceSync: VoiceSyncController;
+  /** v0.6: the Route Explorer's map tiles (fetched only as viewed, cached as OpenStreetMap's policy asks). */
+  readonly tiles: TileCache;
+
+  constructor(private readonly options: HubOptions) {
+    this.home = options.home ?? presenceHome();
+    this.clock = options.clock ?? systemClock;
+    this.welcomeDone = existsSync(join(this.home, WELCOME_FILE));
+    this.tiles = options.tiles ?? new TileCache(join(this.home, "tiles"));
+    this.store = new PresenceStore(this.clock);
+    // Aion's colours are the user's choice: they come back whenever Aion does.
+    this.store.setAppearance(loadAppearance(this.home));
+    // How Aion responds to sound is remembered too; which sources it may capture is not (asked for each session).
+    this.store.setAudioSettings(loadAudioSettings(this.home));
+    this.store.subscribe(() => this.changed());
+    this.bridge = new NativeAudioBridge({
+      ...options.bridge,
+      onFeatures: (source, features) => this.broadcast("audio", encodeFeatures(source, features)),
+      onStatus: status => { this.store.setBridge(status); this.voiceSync?.bridgeChanged(status); },
+      onHeard: source => { if (source === "codex") this.voiceSync.heard(); },
+    });
+    this.voiceSync = new VoiceSyncController({
+      bridge: this.bridge, clock: this.clock, home: this.home,
+      audioEnabled: () => this.store.snapshot().audio.settings.enabled,
+      viewers: () => this.viewers.size,
+      changed: state => this.store.setVoiceSync(state),
+    });
+    this.store.setVoiceSync(this.voiceSync.state);
+  }
+
+  get url() { return `http://127.0.0.1:${this.port}/`; }
+  /** The companion address including its token (only ever given to the local user's browser). */
+  get surfaceUrl() { return `${this.url}?token=${this.token}`; }
+  get listening() { return this.server !== null; }
+
+  async start(): Promise<void> {
+    mkdirSync(this.home, { recursive: true, mode: 0o700 });
+    this.token = readOrCreateToken(this.home);
+    const preferred = this.options.port ?? (Number(process.env.AION_PRESENCE_PORT) || DEFAULT_PORT);
+    this.server = createServer((req, res) => { void this.route(req, res); });
+    this.server.keepAliveTimeout = 5_000;
+    await new Promise<void>((resolve, reject) => {
+      const server = this.server!;
+      const listen = (port: number, retry: boolean) => {
+        server.once("error", (error: NodeJS.ErrnoException) => {
+          if (retry && error.code === "EADDRINUSE") listen(0, false); else reject(error);
+        });
+        server.listen(port, "127.0.0.1", () => { server.removeAllListeners("error"); resolve(); });
+      };
+      listen(preferred, preferred !== 0);
+    });
+    this.server.unref();
+    this.port = (this.server.address() as AddressInfo).port;
+    const discovery: HubDiscovery = { version: 1, pid: process.pid, port: this.port, hub: this.id, url: this.url, startedAt: this.clock.now() };
+    writeFileSync(join(this.home, HUB_FILE), JSON.stringify(discovery), { mode: 0o600 });
+    this.heartbeat = setInterval(() => { for (const viewer of this.viewers.keys()) viewer.write(": ping\n\n"); }, 20_000);
+    this.heartbeat.unref();
+  }
+
+  async stop(): Promise<void> {
+    clearInterval(this.heartbeat);
+    this.voiceSync.dispose();
+    this.bridge.stop(false);
+    this.cancelSettle?.();
+    for (const viewer of this.viewers.keys()) viewer.end();
+    this.viewers.clear();
+    for (const wake of this.waiters) wake();
+    const file = join(this.home, HUB_FILE);
+    try {
+      const current = JSON.parse(readFileSync(file, "utf8")) as HubDiscovery;
+      if (current.hub === this.id) rmSync(file, { force: true });
+    } catch { /* already gone */ }
+    this.store.dispose();
+    const server = this.server;
+    this.server = null;
+    if (server) await new Promise<void>(resolve => { server.closeAllConnections(); server.close(() => resolve()); });
+  }
+
+  snapshot(): HubSnapshot {
+    const { revision: _ignored, ...state } = this.store.snapshot();
+    return {
+      ...state, revision: this.revision,
+      hub: {
+        id: this.id, url: this.url, viewers: this.viewers.size, display: this.display, hooksActive: this.hooksActive(), introduction: this.introduction,
+        launching: this.viewers.size === 0 && this.clock.now() < this.launchingUntil, welcome: this.welcomeRequested || !this.welcomeDone, surfaceMode: this.surfaceMode,
+        surface: this.surfaceState(), audioWindow: this.audioWindow,
+      },
+    };
+  }
+
+  /** Codex hooks are trusted and running: one has reported recently (to this hub, or to the heartbeat file). */
+  hooksActive(): boolean {
+    const now = this.clock.now();
+    if (now - this.lastHookAt < HOOKS_ACTIVE_MS) return true;
+    try { return now - statSync(join(this.home, HOOK_HEARTBEAT_FILE)).mtimeMs < HOOKS_ACTIVE_MS; } catch { return false; }
+  }
+
+  /** Applies a validated command and returns the resulting snapshot. */
+  apply(command: HubCommand): HubSnapshot {
+    switch (command.type) {
+      case "activity":
+        this.cancelSettle?.(); this.cancelSettle = null;
+        if (command.state === "responding") this.respondingAt = this.clock.now();
+        this.store.setActivity(command.state, { label: command.label, source: "model" });
+        break;
+      case "body": this.store.setBody(command.body); break;
+      case "present": this.store.present(command.content, command.hold, { preference: command.presentation, detail: command.detail, rate: command.rate }); break;
+      case "clear": this.store.clearPresentation({ keepTerrain: command.keep === "terrain" }); break;
+      case "open":
+        if (command.display && command.display !== this.display) { this.display = command.display; this.changed(); }
+        if (command.surface && command.surface !== this.surfaceMode) { this.surfaceMode = command.surface; this.changed(); }
+        // A fresh opening greets; a window that is already showing Aion does not greet again.
+        if (command.greet ?? this.viewers.size === 0) this.store.greet();
+        if (command.introduce) { this.introduction = true; this.changed(); }
+        break;
+      case "introduced":
+        if (this.introduction) { this.introduction = false; this.changed(); }
+        break;
+      case "supersede":
+        this.retiring = new Set(this.viewers.values());
+        break;
+      case "launching":
+        // A window takes a few seconds to start (longer the first time a browser opens): others wait that long for it.
+        this.launchingUntil = command.failed ? 0 : this.clock.now() + LAUNCH_WAIT_MS;
+        this.changed();
+        break;
+      case "welcome":
+        if (command.show) { this.welcomeRequested = true; this.changed(); }
+        if (command.done) {
+          this.welcomeRequested = false;
+          if (!this.welcomeDone) {
+            this.welcomeDone = true;
+            try { mkdirSync(this.home, { recursive: true, mode: 0o700 }); writeFileSync(join(this.home, WELCOME_FILE), `${new Date(this.clock.now()).toISOString()}${command.outcome ? ` ${command.outcome}` : ""}\n`, { mode: 0o600 }); } catch { /* remembered for this hub's life */ }
+          }
+          this.changed();
+        }
+        break;
+      case "express": this.store.express({ expression: command.expression, gesture: command.gesture, seconds: command.seconds }); break;
+      case "view": { const { type: _type, ...view } = command; this.store.orient(view); break; }
+      case "markers": this.store.setMarkers(command.markers); break;
+      case "appearance": {
+        const current = this.store.snapshot().appearance;
+        const reset = command.reset;
+        const next: Appearance = {
+          base: reset === "base" || reset === "all" ? DEFAULT_APPEARANCE.base : command.base ?? current.base,
+          accent: reset === "accent" || reset === "all" ? DEFAULT_APPEARANCE.accent : command.accent ?? current.accent,
+        };
+        if (this.store.setAppearance(next)) saveAppearance(this.home, next);
+        break;
+      }
+      case "audio": {
+        if (command.settings) {
+          const next: AudioSettings = { ...this.store.snapshot().audio.settings, ...command.settings };
+          if (this.store.setAudioSettings(next)) saveAudioSettings(this.home, next);
+        }
+        // "Stop reacting to your voice" also ends Codex Voice Sync, or it would simply reconnect.
+        if (command.stop?.includes("codex") && this.voiceSync.preference.enabled) this.voiceSync.set(false);
+        const running = this.bridge.status.source;
+        if (command.stop?.length && running && command.stop.includes(running)) this.bridge.stop();
+        // Codex Voice Sync on or off (v0.4.3): remembered; while on, Codex's voice is followed whenever Aion is open.
+        if (command.voiceSync !== undefined) this.voiceSync.set(command.voiceSync);
+        // Capture starts in the background; the caller reads its outcome from the snapshot (starting → streaming, or why not).
+        if (command.capture) void this.bridge.start(command.capture);
+        // Sound turned on or off, a capture stopped: Voice Sync reconsiders (it resumes once another app's sound ends).
+        if (command.settings || command.stop?.length) this.voiceSync.evaluate();
+        break;
+      }
+      case "play": this.store.play({ events: command.events, tempo: command.tempo, volume: command.volume, ...(command.presentation ? { presentation: command.presentation } : {}) }); break;
+      case "stop-music": if (this.store.snapshot().playback && !this.store.snapshot().playback!.stop) this.store.play({ events: [], tempo: 60, volume: 0, stop: true }); break;
+      case "animation": { const { type: _type, ...control } = command; this.store.controlAnimation(control); break; }
+      case "card": this.store.cardCommand(command.command, command.value); break;
+      case "scene": {
+        const base = { request: command.request, ...(command.base !== undefined ? { base: command.base } : {}), ...(command.label ? { label: command.label } : {}) };
+        if (command.action === "set") this.store.sceneCommand({ ...base, action: "set", document: command.document });
+        else if (command.action === "patch") this.store.sceneCommand({ ...base, action: "patch", ops: command.ops ?? [] });
+        else this.store.sceneCommand({ ...base, action: command.action });
+        break;
+      }
+    }
+    return this.snapshot();
+  }
+
+  /**
+   * A surface reports the interactive card it shows (v0.4.5). Refused when it is about another instance (a closed,
+   * replaced or obsolete card — including one from before this hub started), malformed, or more often than the rate.
+   */
+  cardReport(raw: unknown, window?: string): { ok: true } | { ok: false; status: number; problem: string } {
+    const key = window ?? (raw as { window?: unknown } | null)?.window;
+    if (typeof key === "string") {
+      let limit = this.cardLimits.get(key);
+      if (!limit) {
+        limit = new RateLimiter(CARD_REPORT_RATE.burst, CARD_REPORT_RATE.perSecond, () => this.clock.now());
+        this.cardLimits.set(key, limit);
+        while (this.cardLimits.size > 32) this.cardLimits.delete(this.cardLimits.keys().next().value!);
+      }
+      if (!limit.take()) return { ok: false, status: 429, problem: "too many card reports" };
+    }
+    const card = this.store.snapshot().card;
+    const checked = checkCardReport(raw, card, card ? cardRegistry.get(card.app) : undefined);
+    if (!checked.ok) return { ok: false, status: checked.stale ? 409 : 400, problem: checked.problem };
+    this.store.cardReport(checked.report);
+    return { ok: true };
+  }
+
+  /** Whether a connected companion window is in front, or in true fullscreen, by its own latest report. */
+  private surfaceState() {
+    const windows = [...new Set(this.viewers.values())];
+    const live = windows.map(window => this.reports.get(window)).filter(Boolean) as SurfaceReport[];
+    // Audio: the window that plays (the newest one reporting), as it says itself.
+    const audio = [...live].reverse().find(report => report.audio)?.audio;
+    return {
+      focused: live.some(report => report.focused && report.visible),
+      visible: live.some(report => report.visible) || live.length < windows.length,
+      fullscreen: live.some(report => report.fullscreen),
+      ...(audio ? { audio } : {}),
+    };
+  }
+
+  /** The window that plays music and opens captures: the newest connected companion window. */
+  private get audioWindow() { return [...this.viewers.values()].at(-1) ?? null; }
+
+  /** A companion window describes itself. */
+  report(report: SurfaceReport) {
+    const before = JSON.stringify(this.surfaceState());
+    this.reports.set(report.window, report);
+    if (JSON.stringify(this.surfaceState()) !== before) this.changed();
+  }
+
+  /**
+   * Realtime delta (not in the Plugin): a viewer whose event stream another HTTP server serves (the Realtime app's
+   * Next.js route), treated exactly like a companion window connected to /events. Returns its detach function.
+   */
+  attach(viewer: { write(frame: string): unknown; end(): void }, window: string): () => void {
+    const res = viewer as unknown as ServerResponse;
+    res.write(`retry: 2000\n\n`);
+    this.viewers.set(res, window);
+    this.voiceSync.viewersChanged();
+    if (this.retiring && !this.retiring.has(window)) {
+      for (const [other, id] of this.viewers) if (this.retiring.has(id)) other.write("event: superseded\ndata: {}\n\n");
+      this.retiring = null;
+    }
+    this.changed();
+    return () => {
+      if (!this.viewers.delete(res)) return;
+      if (![...this.viewers.values()].includes(window)) { this.reports.delete(window); this.diagnostics.delete(window); }
+      this.voiceSync.viewersChanged();
+      this.changed();
+    };
+  }
+
+  /** Keeps media for the surfaces under the type its bytes actually are (never what a caller claims). */
+  addMedia(data: Buffer, _claimed?: string): MediaRef {
+    const mime = sniffMedia(data);
+    if (!mime) throw new Error("media-invalid");
+    return this.media.add(data, mime);
+  }
+
+  /** Resolves with the next snapshot newer than `after` (or at once when the hub is a different one). */
+  waitFor(after: number, hub: string | undefined, ms: number): Promise<HubSnapshot> {
+    if (hub !== this.id || this.revision > after || ms <= 0) return Promise.resolve(this.snapshot());
+    return new Promise(resolve => {
+      const done = () => { clearTimeout(timer); this.waiters.delete(done); resolve(this.snapshot()); };
+      const timer = setTimeout(done, ms);
+      this.waiters.add(done);
+    });
+  }
+
+  /** A Codex hook event, mapped to activity (see hooks/mapping.ts). */
+  hook(event: HookEvent) {
+    this.lastHookAt = this.clock.now();
+    const decision = interpretHook(event);
+    const current = this.store.snapshot().activity;
+    switch (decision.type) {
+      case "activity": {
+        if (event.hook_event_name === "UserPromptSubmit") { this.turnActive = true; this.respondingAt = null; this.store.shorten(NEW_TOPIC_SECONDS); }
+        this.cancelSettle?.(); this.cancelSettle = null;
+        const modelWork = current.source === "model" && isWorkState(current.state) && this.clock.now() - current.since < MODEL_PRECEDENCE_MS;
+        // A generic "working" never replaces something more specific the agent itself said it is doing.
+        if (decision.state === "working" && modelWork) break;
+        this.store.setActivity(decision.state, { label: decision.label, source: "hook" });
+        break;
+      }
+      case "settle": {
+        this.cancelSettle?.();
+        const since = current.since;
+        this.cancelSettle = this.clock.schedule(() => {
+          this.cancelSettle = null;
+          const now = this.store.snapshot().activity;
+          if (now.since === since && now.source === "hook" && isWorkState(now.state)) this.store.setActivity(decision.state, { source: "hook" });
+        }, decision.afterMs);
+        break;
+      }
+      case "turn-end": {
+        this.cancelSettle?.(); this.cancelSettle = null;
+        const answered = this.respondingAt;
+        this.respondingAt = null;
+        const done = this.turnActive || current.state === "responding" || answered !== null;
+        this.turnActive = false;
+        if (current.state === "error") break;
+        // The answer may still be being said: Aion keeps answering for the rest of it, then completes.
+        const said = event.speech_seconds ?? 0;
+        const left = answered === null ? 0 : Math.min(ANSWER_TAIL.maxSeconds, said - (this.clock.now() - answered) / 1000);
+        if (left >= ANSWER_TAIL.minSeconds) {
+          this.store.setActivity("responding", { source: "hook", ttl: left + 5 });
+          const since = this.store.snapshot().activity.since;
+          this.cancelSettle = this.clock.schedule(() => {
+            this.cancelSettle = null;
+            const now = this.store.snapshot().activity;
+            if (now.state === "responding" && now.since === since) this.store.setActivity("complete", { source: "hook" });
+          }, left * 1000);
+          break;
+        }
+        // What Codex did (or answered) is complete, then rests.
+        this.store.setActivity(done ? "complete" : "idle", { source: "hook" });
+        break;
+      }
+    }
+    this.changed();
+  }
+
+  /** One event to every companion window (audio features: not a state change, no revision). */
+  private broadcast(event: string, data: unknown) {
+    if (!this.viewers.size) return;
+    const frame = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+    for (const viewer of this.viewers.keys()) viewer.write(frame);
+  }
+
+  private changed() {
+    this.revision++;
+    const snapshot = this.snapshot();
+    const frame = `event: snapshot\ndata: ${JSON.stringify(snapshot)}\n\n`;
+    for (const viewer of this.viewers.keys()) viewer.write(frame);
+    for (const wake of [...this.waiters]) wake();
+  }
+
+  private authorized(req: IncomingMessage, url: URL) {
+    const host = req.headers.host ?? "";
+    if (![`127.0.0.1:${this.port}`, `localhost:${this.port}`, `[::1]:${this.port}`].includes(host)) return false;
+    const given = url.searchParams.get("token") ?? (req.headers["x-aion-token"] as string | undefined) ?? "";
+    const a = Buffer.from(given), b = Buffer.from(this.token);
+    return a.length === b.length && timingSafeEqual(a, b);
+  }
+
+  private async route(req: IncomingMessage, res: ServerResponse) {
+    const url = new URL(req.url ?? "/", "http://127.0.0.1");
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Referrer-Policy", "no-referrer");
+    res.setHeader("Cache-Control", "no-store");
+    if (!this.authorized(req, url)) return send(res, 403, { error: "forbidden" });
+    try {
+      if (req.method === "GET" && url.pathname === "/") {
+        res.setHeader("Content-Security-Policy", "default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'");
+        res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+        return res.end(this.options.page());
+      }
+      if (req.method === "GET" && url.pathname === "/health") return send(res, 200, { ok: true, hub: this.id, pid: process.pid });
+      if (req.method === "GET" && url.pathname === "/events") {
+        const window = url.searchParams.get("window") ?? "";
+        return this.subscribe(req, res, /^[a-z0-9]{8,32}$/.test(window) ? window : randomBytes(6).toString("hex"));
+      }
+      if (req.method === "GET" && url.pathname === "/api/state") {
+        const after = Number(url.searchParams.get("after") ?? -1);
+        const wait = Math.max(0, Math.min(25_000, Number(url.searchParams.get("wait") ?? 0)));
+        return send(res, 200, await this.waitFor(Number.isFinite(after) ? after : -1, url.searchParams.get("hub") ?? undefined, wait));
+      }
+      const media = /^\/media\/(m[a-f0-9]{18})$/.exec(url.pathname);
+      if (req.method === "GET" && media) {
+        const item = this.media.get(media[1]);
+        if (!item) return send(res, 404, { error: "not-found" });
+        res.writeHead(200, { "Content-Type": item.mime, "Content-Length": item.bytes, "Content-Security-Policy": "default-src 'none'; style-src 'unsafe-inline'; sandbox" });
+        return res.end(item.data);
+      }
+      const tile = /^\/tile\/(\d{1,2})\/(\d{1,6})\/(\d{1,6})$/.exec(url.pathname);
+      if (req.method === "GET" && tile) return await this.tile(res, Number(tile[1]), Number(tile[2]), Number(tile[3]));
+      if (req.method === "POST" && url.pathname === "/api/command") {
+        const command = hubCommandSchema.safeParse(await readJson(req, JSON_LIMIT));
+        if (!command.success) return send(res, 400, { error: "invalid-command" });
+        return send(res, 200, this.apply(command.data as HubCommand));
+      }
+      if (req.method === "POST" && url.pathname === "/api/media") {
+        const upload = mediaUploadSchema.safeParse(await readJson(req, MEDIA_LIMIT));
+        if (!upload.success) return send(res, 400, { error: "invalid-media" });
+        const data = Buffer.from(upload.data.data, "base64");
+        const mime = sniffMedia(data);
+        if (!mime || data.length > (mime === GLB_MIME || mime === FIELD_MIME ? MODEL_BYTES : IMAGE_BYTES)) return send(res, 400, { error: "invalid-media" });
+        return send(res, 200, this.addMedia(data, mime));
+      }
+      if (req.method === "POST" && url.pathname === "/api/diagnostics") {
+        const report = diagnosticsSchema.safeParse(await readJson(req, JSON_LIMIT));
+        if (!report.success) return send(res, 400, { error: "invalid-diagnostics" });
+        this.diagnostics.set(report.data.window, { at: this.clock.now(), lines: report.data.lines });
+        while (this.diagnostics.size > 8) this.diagnostics.delete(this.diagnostics.keys().next().value!);
+        res.writeHead(204);
+        return res.end();
+      }
+      if (req.method === "GET" && url.pathname === "/api/diagnostics") {
+        return send(res, 200, Object.fromEntries([...this.diagnostics].filter(([, item]) => this.clock.now() - item.at < 10_000)));
+      }
+      if (req.method === "POST" && url.pathname === "/api/surface") {
+        const report = surfaceReportSchema.safeParse(await readJson(req, JSON_LIMIT));
+        if (!report.success) return send(res, 400, { error: "invalid-surface" });
+        this.report(report.data);
+        res.writeHead(204);
+        return res.end();
+      }
+      if (req.method === "POST" && url.pathname === "/api/card") {
+        const outcome = this.cardReport(await readJson(req, CARD_REPORT_BYTES));
+        if (!outcome.ok) return send(res, outcome.status, { error: outcome.problem });
+        res.writeHead(204);
+        return res.end();
+      }
+      if (req.method === "POST" && url.pathname === "/api/hook") {
+        const event = hookEventSchema.safeParse(await readJson(req, JSON_LIMIT));
+        if (!event.success) return send(res, 400, { error: "invalid-hook" });
+        this.hook(event.data);
+        res.writeHead(204);
+        return res.end();
+      }
+      return send(res, 404, { error: "not-found" });
+    } catch (error) {
+      return send(res, error instanceof Error && error.message === "too-large" ? 413 : 400, { error: "bad-request" });
+    }
+  }
+
+  /** v0.6: a map tile for the open Route Explorer card — only around its route, and only while it is open. */
+  private async tile(res: ServerResponse, z: number, x: number, y: number) {
+    const card = this.store.snapshot().card;
+    if (!card?.route) return send(res, 404, { error: "no-route" });
+    if (!tileAllowed(z, x, y, routeBox(card.route.document.coordinates))) return send(res, 403, { error: "outside-route" });
+    try {
+      const bytes = await this.tiles.get(z, x, y, AbortSignal.timeout(15_000));
+      // The page may keep it a while (the hub's own cache decides what is fresh).
+      res.writeHead(200, { "Content-Type": "image/png", "Content-Length": bytes.length, "Cache-Control": "private, max-age=3600", "Content-Security-Policy": "default-src 'none'; sandbox" });
+      return res.end(bytes);
+    } catch (error) {
+      const code = errorCode(error);
+      return send(res, code === "tiles-busy" ? 429 : code === "tiles-off" ? 404 : 503, { error: code });
+    }
+  }
+
+  private subscribe(req: IncomingMessage, res: ServerResponse, window: string) {
+    res.writeHead(200, { "Content-Type": "text/event-stream", Connection: "keep-alive" });
+    res.write(`retry: 2000\n\n`);
+    this.viewers.set(res, window);
+    req.on("close", () => {
+      this.viewers.delete(res);
+      if (![...this.viewers.values()].includes(window)) { this.reports.delete(window); this.diagnostics.delete(window); }
+      this.voiceSync.viewersChanged();
+      this.changed();
+    });
+    this.voiceSync.viewersChanged();
+    // The window that was brought forward has arrived: the ones it replaces retire (they close themselves).
+    if (this.retiring && !this.retiring.has(window)) {
+      for (const [viewer, id] of this.viewers) if (this.retiring.has(id)) viewer.write("event: superseded\ndata: {}\n\n");
+      this.retiring = null;
+    }
+    // Everyone (including the new viewer) learns the new viewer count.
+    this.changed();
+  }
+}
+
+function send(res: ServerResponse, status: number, body: unknown) {
+  res.writeHead(status, { "Content-Type": "application/json" });
+  res.end(JSON.stringify(body));
+}
+
+function readJson(req: IncomingMessage, limit: number): Promise<unknown> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    req.on("data", (chunk: Buffer) => {
+      size += chunk.length;
+      if (size > limit) { reject(new Error("too-large")); req.destroy(); return; }
+      chunks.push(chunk);
+    });
+    req.on("end", () => { try { resolve(JSON.parse(Buffer.concat(chunks).toString("utf8"))); } catch { reject(new Error("invalid-json")); } });
+    req.on("error", reject);
+  });
+}
+
+/** The per-user token, created once (0600) so a restarted hub keeps the companion window's address valid. */
+export function readOrCreateToken(home: string): string {
+  const file = join(home, TOKEN_FILE);
+  if (existsSync(file)) {
+    const token = readFileSync(file, "utf8").trim();
+    if (/^[a-f0-9]{48}$/.test(token)) return token;
+  }
+  const token = randomBytes(24).toString("hex");
+  writeFileSync(file, token, { mode: 0o600 });
+  chmodSync(file, 0o600);
+  return token;
+}
+
+/** The remembered colours (appearance.json in the runtime directory); the defaults when absent or unreadable. */
+export function loadAppearance(home: string): Appearance {
+  try {
+    const saved = JSON.parse(readFileSync(join(home, APPEARANCE_FILE), "utf8")) as Partial<Appearance>;
+    const color = (value: unknown, fallback: Appearance["base"]) => {
+      const c = value as { hex?: unknown; name?: unknown } | undefined;
+      // eslint-disable-next-line no-control-regex -- a stored name must hold no control characters
+      return c && isHexColor(c.hex) && typeof c.name === "string" && c.name.length > 0 && c.name.length <= 40 && !/[\u0000-\u001f]/.test(c.name) ? { hex: c.hex, name: c.name } : fallback;
+    };
+    return { base: color(saved.base, DEFAULT_APPEARANCE.base), accent: color(saved.accent, DEFAULT_APPEARANCE.accent) };
+  } catch { return DEFAULT_APPEARANCE; }
+}
+
+/** How Aion responds to sound, as the user last set it (audio.json); capture sources are never remembered. */
+export function loadAudioSettings(home: string): AudioSettings {
+  try {
+    const saved = JSON.parse(readFileSync(join(home, AUDIO_FILE), "utf8")) as Partial<AudioSettings>;
+    return {
+      ...DEFAULT_AUDIO_SETTINGS,
+      ...(typeof saved.enabled === "boolean" ? { enabled: saved.enabled } : {}),
+      ...((AUDIO_MODES as readonly unknown[]).includes(saved.mode) ? { mode: saved.mode } : {}),
+      ...((AUDIO_INTENSITIES as readonly unknown[]).includes(saved.intensity) ? { intensity: saved.intensity } : {}),
+      ...(typeof saved.sensitivity === "number" && saved.sensitivity >= 0 && saved.sensitivity <= 1 ? { sensitivity: saved.sensitivity } : {}),
+    };
+  } catch { return DEFAULT_AUDIO_SETTINGS; }
+}
+
+export function saveAudioSettings(home: string, settings: AudioSettings) {
+  try {
+    mkdirSync(home, { recursive: true, mode: 0o700 });
+    const { enabled, mode, intensity, sensitivity } = settings;
+    writeFileSync(join(home, AUDIO_FILE), JSON.stringify({ enabled, mode, intensity, sensitivity }, null, 2), { mode: 0o600 });
+  } catch { /* the choice still applies for this session */ }
+}
+
+export function saveAppearance(home: string, appearance: Appearance) {
+  try {
+    mkdirSync(home, { recursive: true, mode: 0o700 });
+    writeFileSync(join(home, APPEARANCE_FILE), JSON.stringify({ base: appearance.base, accent: appearance.accent }, null, 2), { mode: 0o600 });
+  } catch { /* the choice still applies for this session */ }
+}

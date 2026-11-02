@@ -1,0 +1,21 @@
+{
+  // The vendored Presence Core and its ported tests, checked with the Plugin's own compiler settings (stricter than the
+  // app's: unused locals and parameters are errors) and without Next.js's global types.
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node", "@webgpu/types"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "verbatimModuleSyntax": true,
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "skipLibCheck": true,
+    "noEmit": true
+  },
+  "include": ["src/presence-core", "tests/presence-core"]
+}
