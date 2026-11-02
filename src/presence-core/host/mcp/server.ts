@@ -196,7 +196,7 @@ export const presenceOutput = z.object({
 });
 type PresenceOutput = z.infer<typeof presenceOutput>;
 
-/** Every form id SCF's own visual language offers, grouped by category (symbols have their own tool). */
+/** Every form id Realtime's own visual language offers, grouped by category (symbols have their own tool). */
 export function formCatalog(registry: VisualFormRegistry = visualForms): string {
   // Compact (v0.5.2): Codex cuts a plugin tool's description at 1,000 B, so each id prefix is written once.
   return registry.categories().filter(category => category.id !== "symbol")
@@ -208,7 +208,7 @@ export function formCatalog(registry: VisualFormRegistry = visualForms): string 
     .join(" ");
 }
 
-/** The variants forms declare, forms with the same set grouped together; the first is the default (SCF). */
+/** The variants forms declare, forms with the same set grouped together; the first is the default (Realtime). */
 export function formVariantCatalog(registry: VisualFormRegistry = visualForms): string {
   const groups = new Map<string, string[]>();
   for (const form of registry.forms()) {
@@ -221,7 +221,7 @@ export function formVariantCatalog(registry: VisualFormRegistry = visualForms): 
 
 /**
  * Tool descriptions are part of the visual-intent system: Codex chooses a visual from them. The wording is
- * SCF's, tuned there over many conversations, with "your particle body" read as Aion, Codex's body.
+ * Realtime's, tuned there over many conversations, with "your particle body" read as Aion, Codex's body.
  */
 export const TOOL_DESCRIPTIONS = {
   show_interactive_card: "Open an interactive 3D app beside Aion (until closed). earth-moon: Earth's rotation, the Moon's orbit. cad-viewer: a "
@@ -334,7 +334,7 @@ function routeWords(presentation: Presentation): string {
   }
 }
 
-/** Model-facing explanations of resolver failures (SCF's tool statuses), so Codex can carry on in words. */
+/** Model-facing explanations of resolver failures (Realtime's tool statuses), so Codex can carry on in words. */
 /**
  * Which stage of the terrain pipeline failed (v0.5.2), from the cause a `terrain-unavailable` carries: the elevation
  * service, a tile, or the height field. Short and free of URLs and paths.
@@ -459,7 +459,7 @@ export function createAionServer(options: AionServerOptions): McpServer {
   const showForm = (ctx: ServerContext, args: z.infer<typeof showFormInput>) => {
     const match = visualForms.lookup(args.form);
     if (!match) return failure(`form-not-found: "${args.form}" is not one of Aion's visual forms yet. Use another tool (show_image for a picture), or just speak. Available: ${visualForms.ids().join(", ")}.`);
-    // An unknown variant falls back to the default, like an image intent (SCF): only a well-formed but unknown name fails.
+    // An unknown variant falls back to the default, like an image intent (Realtime): only a well-formed but unknown name fails.
     const variant = (args.variant === undefined ? undefined : visualForms.variant(match.entry, args.variant)) ?? match.variant;
     const shown = visualForms.label(match.entry.id, variant);
     return present(ctx, { kind: "form", form: match.entry.id, ...(variant ? { variant } : {}), label: shown }, args.hold_seconds, { shown });

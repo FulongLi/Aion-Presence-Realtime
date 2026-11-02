@@ -12,7 +12,7 @@ import { ANSWER_TAIL, PresenceHub } from "../../src/presence-core/host/hub/hub";
 import { tempHome } from "./helpers";
 
 /**
- * The live state pipeline, end to end without a browser: a scripted microphone through SCF's real VAD, the
+ * The live state pipeline, end to end without a browser: a scripted microphone through Realtime's real VAD, the
  * Presence engine, Aion's state machine and the figure; and the hub's turn lifecycle with the Stop hook.
  */
 class ScriptedMic implements MicInput {

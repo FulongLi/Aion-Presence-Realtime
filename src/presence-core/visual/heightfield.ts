@@ -2,7 +2,7 @@ import { ResolveError } from "./errors";
 import type { HeightField, Raster, TerrainStyle } from "./types";
 import { validFrame, type Frame } from "./geo/projection";
 
-/** Terrain as real elevations (metres) on a grid, plus an optional region mask (SCF's TerrainSource). */
+/** Terrain as real elevations (metres) on a grid, plus an optional region mask (Realtime's TerrainSource). */
 export interface TerrainSource {
   provider: string;
   kind: "elevation" | "brightness";

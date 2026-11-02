@@ -28,7 +28,7 @@ interface AudioFrame { numberOfFrames: number; sampleRate: number; copyTo(destin
 type TrackProcessor = new (init: { track: MediaStreamTrack }) => { readable: ReadableStream<AudioFrame> };
 
 /**
- * Local-only microphone analysis for the body (SCF's MicrophoneListener): voice activity, loudness and
+ * Local-only microphone analysis for the body (Realtime's MicrophoneListener): voice activity, loudness and
  * acoustic emphasis. Each block of samples is reduced to one RMS number on the spot and discarded. There is no
  * recording, storage, transcription, playback or network transfer, and no AI model hears it: Codex owns the
  * conversation. Where supported, raw frames are read straight from the track (MediaStreamTrackProcessor), which

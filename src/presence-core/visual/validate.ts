@@ -1,5 +1,5 @@
 /**
- * Allowlist validation for the open parts of visual requests (from SCF's visual-actions/validate.ts and the
+ * Allowlist validation for the open parts of visual requests (from Realtime's visual-actions/validate.ts and the
  * tool executor). Queries, regions and names are generous, but never markup, a URL or control text; emoji are
  * validated as whole grapheme sequences, never by `.length`.
  */
@@ -15,7 +15,7 @@ const PERSON = /^[\p{L}\p{M} .'’·-]+$/u;
 const QUERY = /^[\p{L}\p{M}\p{N} .,'’·\-&()/:+#!?"]+$/u;
 const LINKISH = /(?:\/\/|www\.|\b(?:javascript|data|file|https?):(?!\s))/i;
 
-/** Limits from SCF's tool definitions. */
+/** Limits from Realtime's tool definitions. */
 export const VISUAL_LIMITS = { query: 100, region: 80, person: 60, number: 12 } as const;
 
 /**
@@ -65,7 +65,7 @@ const pad = (value: number) => String(value).padStart(2, "0");
 
 /**
  * Models sometimes say "3:42 PM" or "7:05" where HH:MM is asked for. Unambiguous forms are normalized;
- * anything else is rejected rather than guessed (SCF's executor).
+ * anything else is rejected rather than guessed (Realtime's executor).
  */
 export function normalizeClockTime(value: string): string | null {
   const match = /^\s*(\d{1,2})[:.](\d{2})(?::\d{2})?\s*([ap])?\.?\s*m?\.?\s*$/i.exec(value);

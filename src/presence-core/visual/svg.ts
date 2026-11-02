@@ -1,5 +1,5 @@
 /**
- * SVG checks and sizing (from SCF's transforms/svg.ts). An SVG is only ever drawn through an <img> (browsers
+ * SVG checks and sizing (from Realtime's transforms/svg.ts). An SVG is only ever drawn through an <img> (browsers
  * render SVG images in a secure static mode: no scripts, no external loads) onto a canvas, so the particle
  * sampler only sees pixels. Curated assets are still checked before use, and refused rather than sanitized.
  */

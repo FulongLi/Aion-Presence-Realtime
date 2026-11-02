@@ -16,11 +16,11 @@ import { encodeMap, MAP_MIME, type GeoMap } from "../../visual/geo/map";
 import type { Frame } from "../../visual/geo/projection";
 
 /**
- * The Visual Resolver, server side (SCF's visual-resolver/resolve.ts for images, portraits and terrain):
+ * The Visual Resolver, server side (Realtime's visual-resolver/resolve.ts for images, portraits and terrain):
  *
  *   validated request ─► curated local asset │ provider chain ─► download ─► check ─► local media
  *
- * In SCF the browser fetched and decoded. In the plugin the local MCP process does the network part, so the
+ * In Realtime the browser fetched and decoded. In the plugin the local MCP process does the network part, so the
  * Presence surface (embedded in a host, or the companion window) never needs remote access: it receives the
  * same validated local media as for a local file, and frames it by the request's intent (portrait, object,
  * map, logo). Terrain becomes a height field here and travels as compact bytes.

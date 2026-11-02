@@ -738,7 +738,7 @@ export class PresenceView {
       case "image": {
         const blob = await this.transport.media(request.media.id);
         signal.throwIfAborted();
-        // The fit carries the request's intent: a portrait keeps SCF's head-and-shoulders band and portrait sampling.
+        // The fit carries the request's intent: a portrait keeps Realtime's head-and-shoulders band and portrait sampling.
         // Heritage: the same photograph in an antique oval (see visual/oval.ts).
         return { visual: normalizeImage(await decodeImage(blob), request.fit, { portraitStyle: request.style }), hold, label: "image" };
       }

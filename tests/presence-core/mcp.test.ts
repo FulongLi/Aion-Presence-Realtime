@@ -137,7 +137,7 @@ test("tool input validation rejects unknown states, fields, oversize text and un
     await rejected("show_text", { text: "   " }, /text/);
     await rejected("show_result", { title: "t", summary: "s", details: Array(9).fill("d") }, /details|8/);
     await rejected("show_visual_form", { form: "dragon" }, /form-not-found/);
-    // A variant is a hint (SCF): an unknown one falls back to the form's default instead of failing.
+    // A variant is a hint (Realtime): an unknown one falls back to the form's default instead of failing.
     const fallback = await aion.call("show_form", { form: "orion", variant: "rainbow" }) as Result;
     assert.equal(fallback.isError, undefined);
     assert.equal((fallback.structuredContent as { presentation: { description: string } }).presentation.description, "form: Orion (constellation)");

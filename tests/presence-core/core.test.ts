@@ -137,7 +137,7 @@ test("the sphere remains the default body; the figure and the eyes can be select
   assert.equal(level, 0); assert.equal(body.eyes, 0); assert.equal(body.transitioning, false);
 });
 
-// ── Figure geometry (from SCF Presence) ───────────────────────────────────────────────────────────────
+// ── Figure geometry (from Aion Presence Realtime) ───────────────────────────────────────────────────────────────
 
 const finite = (values: ArrayLike<number>) => Array.from(values).every(Number.isFinite);
 

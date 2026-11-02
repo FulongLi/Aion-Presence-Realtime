@@ -36,6 +36,7 @@ backends. Every local change to a file in this directory is listed below, so a l
 | `host/sim/tools.ts` | `toolEnv` builds its environment with a cast. | Next.js's types make `NODE_ENV` a required `ProcessEnv` key; behaviour is unchanged. |
 | `surface/music/notation.ts` | The Bravura font import reaches `node_modules` one directory further up (`../../../../`). | VexFlow does not export its font module; the Plugin imports it by a path relative to its own `src/`. |
 | `surface/view.ts` | Constructor option `speech` (a `WelcomeSpeech`); `listen(shared?)` takes the voice session's microphone stream and never stops a shared track. | Realtime speaks the welcome with its own voice and opens the microphone once. Defaults are the Plugin's behaviour. |
+| comments in 29 files (no code) | "SCF Presence" → "Aion Presence Realtime", "SCF's …" → "Realtime's …", "SCF" → "Realtime". | The Realtime app was renamed from SCF Presence Realtime; these notes credit where each part came from. Comments only: a sync can re-apply this by search and replace. |
 | `host/hub/hub.ts` | New public `attach(viewer, window)`: a viewer whose event stream another HTTP server serves. | Realtime serves the hub's snapshots from a Next.js route instead of the hub's own loopback HTTP server. Mirrors the private `subscribe`. |
 
 ## Tests
@@ -43,5 +44,6 @@ backends. Every local change to a file in this directory is listed below, so a l
 The Plugin's tests for this core are ported to [`tests/presence-core`](../../tests/presence-core) with import paths
 rewritten. Removed there, because they test the Plugin's package rather than this core: the Codex Stop-hook speech
 estimate, skill-file checks (Storyteller Mode, narration style), the native macOS audio bridge's Swift sources, the
-plugin manifest validation and the repository governance check. The real-toolchain FEM tests run here unchanged
+plugin manifest validation and the repository governance check. Test names and messages that said "SCF" say
+"Realtime" here, matching the renamed comments. The real-toolchain FEM tests run here unchanged
 (they skip, and say so, without FreeCAD, Gmsh and Elmer).

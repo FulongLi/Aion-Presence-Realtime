@@ -131,7 +131,7 @@ export const TARGET_SIDE = 300;
 export const HERITAGE_ANCHOR_Y = 0.1;
 
 /**
- * Normalizes a decoded picture for the particle body by its fit (SCF's `normalizeImage` by intent):
+ * Normalizes a decoded picture for the particle body by its fit (Realtime's `normalizeImage` by intent):
  * - portrait: in the heritage style (the default), exactly 3:4 (cropped, never stretched) and framed by the oval
  *   (see oval.ts); classic: a head-and-shoulders crop (a 4:5 band from near the top); both with portrait sampling;
  * - map: kept whole (a map's edges are information), object sampling;
@@ -157,7 +157,7 @@ const TRANSPARENT = 24;
 export const LOGO_SIDE = 400;
 
 /**
- * Prepares a logo for the particle body: a crisp mark on nothing (from SCF's SVG transform).
+ * Prepares a logo for the particle body: a crisp mark on nothing (from Realtime's SVG transform).
  * - Transparency is kept as it is (a transparent background is simply ignored by the sampler).
  * - A fully opaque logo on a plain background (e.g. a white rectangle) has that background keyed out.
  * - Empty margins are trimmed, leaving a small even border; the aspect ratio is preserved.

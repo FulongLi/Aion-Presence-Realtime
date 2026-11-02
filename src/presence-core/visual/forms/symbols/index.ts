@@ -7,7 +7,7 @@ import type { VisualFormEntry, VisualFormPack } from "../types";
  * The symbol pack: plain marks the body can become, chiefly to present an outcome (a check for success,
  * a cross for failure, an exclamation for a partial result). They are painted procedurally with the same
  * ink painter as the Tao forms, as clean full strokes, so they need no canvas or font and look the same
- * on every device. (SCF Presence drew these on a 2D canvas; here they are ordinary visual forms.)
+ * on every device. (Aion Presence Realtime drew these on a 2D canvas; here they are ordinary visual forms.)
  */
 const INK: Ink = { density: 1, tone: 0.92, grain: 0.06 };
 const WIDTH = 0.16;

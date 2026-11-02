@@ -5,7 +5,7 @@ import { ResolveError } from "../../visual/errors";
 import { svgProblem } from "../../visual/svg";
 
 /**
- * Curated local visual assets (SCF's sources/localAssets.ts): first-party material, such as the creator
+ * Curated local visual assets (Realtime's sources/localAssets.ts): first-party material, such as the creator
  * company's logo, that must come from the plugin itself, never from a public image search. They ship in the
  * plugin's assets/ directory.
  */

@@ -11,7 +11,7 @@ const run = (quality: AdaptiveQuality, dt: number, seconds: number) => {
   return changes;
 };
 
-// ── Adaptive quality (from SCF Presence, with effects shed before density) ─────────────────────────────
+// ── Adaptive quality (from Aion Presence Realtime, with effects shed before density) ─────────────────────────────
 
 test("tiers extend to high-end desktops while phones stay conservative", () => {
   assert.deepEqual(qualityTiers.map(tier => tier.count), [6_000, 12_000, 20_000, 35_000, 50_000]);
@@ -83,7 +83,7 @@ test("sphere samples are deterministic and every quality prefix covers the volum
   }
 });
 
-test("the Presence visual identity keeps SCF Presence's tuning", () => {
+test("the Presence visual identity keeps Aion Presence Realtime's tuning", () => {
   assert.deepEqual(particleDefaults.geometry, { radius: 1.35, size: 0.0165 });
   assert.deepEqual(particleDefaults.bloom, { strength: 0.2, radius: 0.38, threshold: 0.85 });
   assert.deepEqual(particleDefaults.thinking, { turbulence: 0.52, rotation: 0.72, travel: 0.12 });

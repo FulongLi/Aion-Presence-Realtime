@@ -81,7 +81,7 @@ const IMPULSES: Partial<Record<AionState, number>> = { acknowledging: 0.55, comp
 
 /** Host activities the user's voice may take over as listening: resting, or still thinking about the prompt. */
 const LISTENABLE: readonly ActivityState[] = ["idle", "listening", "thinking", "complete", "error"];
-/** Host activities after which a finished utterance is inferred to start a thought (SCF's offline rule). */
+/** Host activities after which a finished utterance is inferred to start a thought (Realtime's offline rule). */
 const RESTING: readonly ActivityState[] = ["idle", "listening", "complete", "error"];
 
 export const engineDefaults = {
@@ -89,7 +89,7 @@ export const engineDefaults = {
   audibleLevel: 0.035,
   /** Silence that ends an audible speaking turn. */
   speakingRelease: 0.55,
-  /** Microphone activity is ignored this long after real host audio ends (speaker echo, SCF). */
+  /** Microphone activity is ignored this long after real host audio ends (speaker echo, Realtime). */
   echoGuard: 0.4,
   /**
    * Without real host audio, Codex's voice may still be playing after its turn ends: the microphone is ignored
@@ -132,14 +132,14 @@ export interface EngineInputs {
 }
 
 /**
- * The Presence engine (SCF's PresenceEngine, with the AI transport replaced by the host):
+ * The Presence engine (Realtime's PresenceEngine, with the AI transport replaced by the host):
  *
  *   host activity (hooks, the agent) ─► thinking · reading · editing · testing · building · responding · complete
  *   local microphone VAD ───────────► listening (immediate), focus, user amplitude; a finished utterance → thinking
- *   real host audio, if ever exposed ► speaking, amplitude, spectrum (SCF's speech motion)
+ *   real host audio, if ever exposed ► speaking, amplitude, spectrum (Realtime's speech motion)
  *
  * The microphone is a local signal only: the engine reads loudness and voice activity, never audio. Echo: with
- * real host audio, the microphone is ignored while it is audible and briefly after (SCF). Without it, the
+ * real host audio, the microphone is ignored while it is audible and briefly after (Realtime). Without it, the
  * engine is conservative instead: while Codex is responding, and for `echoHold` after, the user's voice does not
  * take over, so Codex's own voice from the speakers is not mistaken for the user. (Real barge-in needs real
  * host audio; it is not claimed.)
@@ -199,7 +199,7 @@ export class PresenceEngine implements PresenceSignalSource {
     const answering = host === "responding" && now - this.respondingSince < c.respondingEchoMax;
     if (answering) this.respondingSeen = now;
 
-    // Real host audio: an audible gate with a release, so syllable gaps do not flicker (SCF).
+    // Real host audio: an audible gate with a release, so syllable gaps do not flicker (Realtime).
     const frameAudio = this.audio.read(now);
     const level = frameAudio ? clamp01(frameAudio.amplitude) : 0;
     if (level > c.audibleLevel) { this.quiet = 0; this.sounding = true; }

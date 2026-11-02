@@ -1,6 +1,6 @@
 import type { ImageIntent } from "../../visual/types";
 
-/** One image a provider found (SCF's ImageCandidate). `load` lets a provider hand over bytes directly. */
+/** One image a provider found (Realtime's ImageCandidate). `load` lets a provider hand over bytes directly. */
 export interface ImageCandidate {
   provider: string;
   url: string;

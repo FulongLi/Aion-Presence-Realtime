@@ -1,4 +1,4 @@
-/** A failure with a stable, model-safe code (e.g. "image-not-found", "region-not-found"). From SCF's resolver. */
+/** A failure with a stable, model-safe code (e.g. "image-not-found", "region-not-found"). From Realtime's resolver. */
 export class ResolveError extends Error {
   /** v0.5.2: the underlying short code behind a family failure (e.g. `timeout`, `http-503`, `terrain-tile-invalid`). */
   readonly detail?: string;

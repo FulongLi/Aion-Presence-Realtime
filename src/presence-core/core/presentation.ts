@@ -55,7 +55,7 @@ export const LIMITS = {
 } as const;
 
 /**
- * Default seconds each kind of presentation is held formed before Aion returns to its body. The visuals SCF
+ * Default seconds each kind of presentation is held formed before Aion returns to its body. The visuals Realtime
  * Presence had keep its tuned hold times (clock 7, number 7, glyph text 6, symbol 5, emoji 4, form 10,
  * portrait 14, image 12, terrain 14); text standing beside the body is held long enough to read; results and
  * artifacts, which only the plugin presents, are held longer.
@@ -204,7 +204,7 @@ export function cleanCode(value: unknown, max: number): string | null {
 
 const clampHold = (seconds: number) => Math.max(LIMITS.hold.min, Math.min(LIMITS.hold.max, seconds));
 
-/** The body's default hold for a kind (SCF's tuned times, see HOLD_SECONDS). */
+/** The body's default hold for a kind (Realtime's tuned times, see HOLD_SECONDS). */
 function bodySeconds(content: PresentationContent): number {
   switch (content.kind) {
     case "text": return HOLD_SECONDS.text;

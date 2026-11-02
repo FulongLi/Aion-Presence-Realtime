@@ -3,7 +3,7 @@ import { ResolveError } from "../../../visual/errors";
 import type { ImageCandidate, ImageProvider } from "../types";
 
 /**
- * Optional web-scale image search (SCF's server/imageSearch.ts): Brave Search's image API. It is **off by
+ * Optional web-scale image search (Realtime's server/imageSearch.ts): Brave Search's image API. It is **off by
  * default** and only exists when the user sets AION_PRESENCE_BRAVE_SEARCH_KEY themselves; the standard
  * experience needs no key. Only the query is sent, and only thumbnails on Brave's own image host are read.
  */

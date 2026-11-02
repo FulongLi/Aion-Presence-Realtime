@@ -6,7 +6,7 @@ import { rankCandidates } from "./rank";
 import type { ImageCandidate, ImageProvider, ResolveTrace } from "./types";
 
 /**
- * Open image retrieval (SCF's providers/images.ts). Any query goes to an ordered chain of providers suited to
+ * Open image retrieval (Realtime's providers/images.ts). Any query goes to an ordered chain of providers suited to
  * its intent; the first provider that yields a usable, downloadable image wins. Nothing here knows a list of
  * supported things: a Model Y, a wind turbine or a public figure all take the same path.
  *
@@ -17,7 +17,7 @@ import type { ImageCandidate, ImageProvider, ResolveTrace } from "./types";
  * | map                          | commons → wikipedia → openverse         |
  * | reference, general           | openverse → commons → web → wikipedia   |
  *
- * "web" is optional (a key the user sets) and skipped when not configured. SCF decoded each download in the
+ * "web" is optional (a key the user sets) and skipped when not configured. Realtime decoded each download in the
  * browser; here the bytes are checked server-side (type by magic bytes, dimensions from the header) and
  * handed to the Presence surface as local media, so the surface never fetches anything remote.
  */
