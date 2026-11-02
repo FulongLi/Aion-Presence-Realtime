@@ -139,7 +139,7 @@ export class PromoDirector implements ConversationSource, MicInput {
 
   private async call(name: string, args: Readonly<Record<string, string>>, id: string) {
     const execution = await this.deps.runner.execute(name, JSON.stringify(args));
-    this.record.push({ at: this.time, label: `${name} ${id}`, outcome: execution.result.status });
+    this.record.push({ at: this.time, label: `${name} ${id}`, outcome: String(execution.result.status) });
     if (this.stopped || execution.result.ok) return;
     // Never substitute another visual: a scene that cannot be shown stops the film, loudly.
     this.failure ??= new PromoError("visual-failed", `${name} (${id}): ${execution.result.status}`);

@@ -23,7 +23,9 @@ const KEPT = ["shown", "source", "markers", "colors", "music", "writing", "anima
 export const toolFailure = (error: string, message: string): ToolOutcome => ({ ok: false, error, message: neutralize(message).slice(0, MESSAGE_LIMIT) });
 
 /** The leading code of a Presence Core failure message ("form-not-found: …" → form-not-found). */
-const failureCode = (text: string) => /^([a-z][a-z0-9-]{2,40}):/.exec(text)?.[1] ?? "failed";
+const failureCode = (text: string) => /^([a-z][a-z0-9-]{2,40}):/.exec(text)?.[1]
+  // The tool server's own schema check (MCP SDK): "Input validation error: Invalid arguments for tool …".
+  ?? (/^(Input validation error|Invalid arguments)/i.test(text) ? "invalid-arguments" : "failed");
 
 /** Phrases written for Codex's host that would mislead a voice model in Realtime (the page is always the surface). */
 const HOST_CLAUSES = [

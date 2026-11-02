@@ -76,7 +76,12 @@ export class PresenceHost {
     const hub = new PresenceHub({ home: options.home, port: 0, page: () => "", bridge: { locate: () => null } });
     const link = new InProcessLink(hub);
     const cadWorkspace = join(options.home, "cad");
-    const env: NodeJS.ProcessEnv = { ...options.env, AION_CAD_WORKSPACE: cadWorkspace, AION_SIM_WORKSPACE: join(options.home, "sim") };
+    // The Chinese Writing Pack is found by path here: the core's own lookup is relative to its module, which bundling moves.
+    const pack = join(process.cwd(), "presence-assets", "packs", "chinese-writing");
+    const env: NodeJS.ProcessEnv = {
+      ...(existsSync(pack) ? { AION_CHINESE_PACK: pack } : {}),
+      ...options.env, AION_CAD_WORKSPACE: cadWorkspace, AION_SIM_WORKSPACE: join(options.home, "sim"),
+    };
     const server = createAionServer({
       link, page: () => "", version: options.version, env, assetsDir: options.assetsDir,
       cadScript: options.engineering.cad ? options.cadScript : undefined,
@@ -140,8 +145,8 @@ export class PresenceHost {
   surfaceReport(report: SurfaceReport) { this.hub.report(report); }
   /** The welcome was seen (remembered in this viewer's home), or asked for again. */
   welcome(done: boolean, outcome?: string) { this.hub.apply(done ? { type: "welcome", done: true, ...(outcome ? { outcome } : {}) } as HubCommand : { type: "welcome", show: true }); }
-  /** The user dismissed what is shown: every surface returns to the body. */
-  dismiss() { this.hub.apply({ type: "clear" }); }
+  /** The user dismissed what is shown: every surface returns to the body (closing a route's card keeps its terrain, as in the Plugin). */
+  dismiss() { this.hub.apply({ type: "clear", keep: "terrain" }); }
   /** A voice-derived activity (Realtime has no hooks): shown on every surface of this viewer. */
   activity(command: Extract<HubCommand, { type: "activity" }>) { this.hub.apply(command); }
 

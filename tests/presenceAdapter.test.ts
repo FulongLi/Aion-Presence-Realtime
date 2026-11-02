@@ -85,7 +85,7 @@ test("host: a function call runs the Presence Core and returns only what happene
     assert.equal(missing.ok, false);
     assert.equal(missing.error, "form-not-found");
     const invalid = await host.call("show_number", { value: 12 });
-    assert.equal(invalid.ok, false, "the core's schema refuses a wrong type");
+    assert.deepEqual([invalid.ok, invalid.error], [false, "invalid-arguments"], "the core's schema refuses a wrong type, with a stable code");
     const unknown = await host.call("rm_rf", {});
     assert.deepEqual([unknown.ok, unknown.error], [false, "unknown-tool"]);
     const local = await host.call("show_image", { query: "x", source: "/etc/passwd" });

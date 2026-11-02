@@ -43,6 +43,25 @@ export interface VoiceTimings {
   resultToAudioMs: number | null;
 }
 
+/**
+ * How the page's Presence (the Presence Core's view) joins the voice loop. All optional: without them the controller
+ * drives the legacy body (src/aion, src/particle) as before (the promo film and the tests).
+ */
+export interface PresenceHooks {
+  /** Executes both backends' function calls (Realtime: the Presence Core on the server). Replaces the legacy executor. */
+  runner?: ToolRunner;
+  /** The assistant's remote audio stream arrived (or went away): the body analyses it for speaking. */
+  assistantStream?(stream: MediaStream | null): void;
+  /** The microphone stream the voice session uses (the body listens on the same stream). */
+  microphoneStream?(stream: MediaStream): void;
+  /** The first greeting is being spoken: the body waves. */
+  greeting?(): void;
+  /** Whether the spoken greeting may happen (false while the first-run welcome speaks instead). */
+  greetingAllowed?(): boolean;
+  /** The user started a new turn. */
+  userTurn?(): void;
+}
+
 export const presenceDefaults = {
   /** A connected session with no conversation for this long ends (and releases the microphone) to save cost. */
   idleEndMs: 10 * 60_000,
@@ -97,6 +116,7 @@ export class PresenceController {
     private readonly environments: VoiceEnvironments = browserEnvironments,
     backend: VoiceBackend = DEFAULT_VOICE_BACKEND,
     private readonly options = presenceDefaults,
+    private readonly hooks: PresenceHooks = {},
   ) {
     this.resolver = createBrowserResolver();
     this.visual = new VisualActionController(this.resolver.resolve, (error, action) => {
@@ -104,9 +124,10 @@ export class PresenceController {
     });
     this.aion = new Aion({ signal: () => this.engine.signal, presenting: () => this.visual.presenting });
     this.executor = new ToolExecutor(this.visual, undefined, { setBody: form => this.setBody(form) });
+    const execute = hooks.runner ? (name: string, args: string) => hooks.runner!.execute(name, args) : (name: string, args: string) => this.executor.execute(name, args);
     this.runner = {
       execute: async (name, args) => {
-        const execution = await this.executor.execute(name, args);
+        const execution = await execute(name, args);
         this.resultAt = performance.now();
         return execution;
       },
@@ -202,6 +223,7 @@ export class PresenceController {
     if (!this.client.speak(greetingLine(this.aion.identity))) return false;
     this.aion.greeting.markSent();
     this.aion.gesture("greeting");
+    this.hooks.greeting?.();
     return true;
   }
 
@@ -223,7 +245,10 @@ export class PresenceController {
       userActive: this.listener.vad.voiced || this.engine.signal.mode === "listening",
       conversationActive: this.client.busy(now) || this.engine.signal.mode === "speaking",
     }, now);
-    if (fire) this.greet();
+    if (!fire) return;
+    // The first-run welcome introduces Aion instead: the greeting is not said a second time.
+    if (this.hooks.greetingAllowed && !this.hooks.greetingAllowed()) { gate.markSent(); return; }
+    this.greet();
   }
 
   private createClient(backend: VoiceBackend): ActiveVoiceClient {
@@ -233,6 +258,7 @@ export class PresenceController {
     const onRemoteStream = (stream: MediaStream | null) => {
       if (!current()) return;
       if (stream) this.assistant.attach(stream); else this.assistant.detach();
+      this.hooks.assistantStream?.(stream);
     };
     const onStatus = (connection: ConnectionState, error: string | null) => { if (current()) this.sessionStatus(connection, error); };
     const created: ActiveVoiceClient = backend === "live"
@@ -272,6 +298,7 @@ export class PresenceController {
       this.stream = stream;
       this.listener.attach(stream);
       this.engine.setMicrophone(this.listener);
+      this.hooks.microphoneStream?.(stream);
     }
     this.update({ mic: "ready" });
     this.client.connect(stream);
@@ -316,6 +343,7 @@ export class PresenceController {
 
   private realtimeEvent(event: RealtimeEvent) {
     if (event.type === "user.speech_started" || event.type === "response.started") this.lastActivity = performance.now();
+    if (event.type === "user.speech_started") this.hooks.userTurn?.();
     // Barge-in: OpenAI cut the unplayed audio; speaking ends now and listening takes over.
     if (event.type === "audio.cleared") this.engine.interrupt(performance.now() / 1000);
     if (event.type === "error" && process.env.NODE_ENV === "development") console.warn("[SCF] Realtime error", event);
@@ -327,6 +355,7 @@ export class PresenceController {
    */
   private liveEvent(event: LiveEvent) {
     if (event.type === "transcript.user" || event.type === "transcript.assistant" || event.type === "delegation.created") this.lastActivity = performance.now();
+    if (event.type === "delegation.created") this.hooks.userTurn?.();
     if (event.type === "error" && process.env.NODE_ENV === "development") console.warn("[SCF] GPT-Live error", event);
   }
 

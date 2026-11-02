@@ -1,5 +1,5 @@
 import { PRESENCE_INSTRUCTIONS } from "./instructions";
-import { visualTools } from "../voice/tools/definitions";
+import { visualTools, type SessionTool } from "../voice/tools/definitions";
 
 /**
  * GA Realtime session configuration (the `session` object of POST /v1/realtime/client_secrets).
@@ -24,6 +24,8 @@ export interface SessionOptions {
   /** Optional input transcription model; transcripts are kept in memory for ?debug=1 only. */
   transcriptionModel?: string;
   instructions?: string;
+  /** The session's function tools (the server passes the canonical registry's); default: the legacy visual tools. */
+  tools?: readonly SessionTool[];
 }
 
 export type TurnDetectionConfig =
@@ -43,7 +45,7 @@ export interface RealtimeSessionConfig {
     };
     output: { voice: string };
   };
-  tools: typeof visualTools;
+  tools: readonly SessionTool[];
   tool_choice: "auto";
 }
 
@@ -92,7 +94,7 @@ export function buildSessionConfig(options: SessionOptions): RealtimeSessionConf
       },
       output: { voice: options.voice },
     },
-    tools: visualTools,
+    tools: options.tools ?? visualTools,
     tool_choice: "auto",
   };
 }

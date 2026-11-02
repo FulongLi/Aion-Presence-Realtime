@@ -1,7 +1,7 @@
 import { Accidental, Annotation, AnnotationVerticalJustify, Beam, Curve, Dot, Formatter, Fraction, Renderer, Stave, StaveNote, StaveTie, Stem, Voice, VoiceMode, VexFlow, BarlineType } from "vexflow/core";
 // The Bravura music font (SIL OFL 1.1), as VexFlow ships it. Loaded from its bytes (never a URL), so no font request is made.
 // @ts-expect-error -- VexFlow publishes this module's types elsewhere (build/types); it exports one data: URL string.
-import { Bravura as BravuraFont } from "../../../node_modules/vexflow/build/esm/src/fonts/bravura.js";
+import { Bravura as BravuraFont } from "../../../../node_modules/vexflow/build/esm/src/fonts/bravura.js";
 
 const Bravura = BravuraFont as string;
 import { checkScore, displayedAccidentals, type Barline, type CheckedNote, type CheckedScore, type Dynamic, type MusicHighlight, type MusicScore } from "../../music/notation/score";

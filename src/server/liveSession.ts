@@ -1,4 +1,5 @@
 import { buildLiveSessionConfig, liveOptionsFromEnv, type LiveSessionConfig } from "../live/session";
+import type { SessionTool } from "../voice/tools/definitions";
 import { originAllowed, safetyIdentifier } from "./realtimeToken";
 
 /**
@@ -23,8 +24,8 @@ export interface LiveSessionRequest {
 
 export interface LiveSessionResponse { status: number; body: Record<string, unknown> }
 
-export function liveSessionRequest(env: Record<string, string | undefined>, sdp: string): LiveSessionRequest {
-  return { session: buildLiveSessionConfig(liveOptionsFromEnv(env)), transport: { type: "webrtc", sdp } };
+export function liveSessionRequest(env: Record<string, string | undefined>, sdp: string, tools?: readonly SessionTool[]): LiveSessionRequest {
+  return { session: buildLiveSessionConfig({ ...liveOptionsFromEnv(env), ...(tools ? { tools } : {}) }), transport: { type: "webrtc", sdp } };
 }
 
 /** Only a plausible SDP offer is forwarded: text starting with the protocol version line, no NULs. */
@@ -45,6 +46,8 @@ export async function createLiveSession(
   request: Request,
   env: Record<string, string | undefined>,
   upstream: typeof fetch = fetch,
+  /** The canonical registry's tools for the Responses backend (the route passes them); default: the legacy visual tools. */
+  tools?: readonly SessionTool[],
 ): Promise<LiveSessionResponse> {
   const fail = (status: number, error: string, detail?: string): LiveSessionResponse =>
     ({ status, body: detail && env.NODE_ENV !== "production" ? { error, detail } : { error } });
@@ -54,7 +57,7 @@ export async function createLiveSession(
   const body = await readBody(request);
   if (!body || !validOffer(body.sdp)) return fail(400, "bad-request");
 
-  const payload = liveSessionRequest(env, body.sdp);
+  const payload = liveSessionRequest(env, body.sdp, tools);
   const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" };
   const safetyId = await safetyIdentifier(body.installationId, env.SCF_SAFETY_ID_SALT);
   if (safetyId) headers["OpenAI-Safety-Identifier"] = safetyId;

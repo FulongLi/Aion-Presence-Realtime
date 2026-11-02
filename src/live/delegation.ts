@@ -1,5 +1,5 @@
 import type { ToolRunner } from "../voice/tools/executor";
-import { serializeResult, type ToolResult } from "../voice/tools/results";
+import { serializeResult, type ModelResult } from "../voice/tools/results";
 import type { BackendStatus, FunctionCallItem, LiveClientEvent, LiveEvent } from "./events";
 
 export interface LiveToolRecord {
@@ -9,7 +9,7 @@ export interface LiveToolRecord {
   delegationId?: string;
   responseId?: string;
   at: number;
-  result?: ToolResult;
+  result?: ModelResult;
   ms?: number;
 }
 
@@ -146,7 +146,7 @@ export class LiveDelegationLoop {
     if (this.history.length > 20) this.history.shift();
     this.host.onToolStarted?.(record);
     const generation = this.generation;
-    const finish = (result: ToolResult, ms?: number) => {
+    const finish = (result: ModelResult, ms?: number) => {
       if (generation !== this.generation) return;
       record.result = result; record.ms = ms;
       this.host.send({
